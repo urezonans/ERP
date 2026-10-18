@@ -46,7 +46,7 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .tile .sub{font-size:12px;color:#666;display:flex;justify-content:space-between;gap:8px;margin-top:4px}
 .tile .code{font-size:11px;color:#888;font-family:monospace}
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;
-  background:#f0f0f0;color:#555;font-weight:bold}
+  background:#f0f0f0;color:#555;font-weight:bold;white-space:nowrap}
 .badge.blue{background:var(--blue2);color:var(--blue)}
 .badge.green{background:var(--green2);color:#2e7d32}
 .badge.warn{background:var(--warn2);color:#8a6d00}
@@ -65,6 +65,8 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .btn.big{padding:12px 20px;font-size:15px;width:100%}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .toolbar input,.toolbar select{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+
+/* Канбан */
 .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
 .kcol{background:#f5f5f5;border:1px solid var(--line);border-radius:8px;padding:10px;
   min-width:260px;max-width:260px;flex-shrink:0;display:flex;flex-direction:column;min-height:300px}
@@ -79,6 +81,8 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .task .m{font-size:11px;color:#666;display:flex;flex-direction:column;gap:2px}
 .task .acts{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .task .acts button{font-size:11px;padding:2px 6px}
+
+/* Модалки */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;overflow:auto}
 .modal-bg.open{display:block}
 .modal{background:#fff;max-width:1000px;margin:30px auto;border-radius:12px;padding:18px}
@@ -113,7 +117,7 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .toast.warn{border-left-color:var(--warn)}
 @keyframes slide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 
-/* === Гант === */
+/* Гант */
 .gantt{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
 .gantt table{border-collapse:collapse;width:100%;min-width:900px;font-size:12px}
 .gantt th,.gantt td{border:1px solid #eee;padding:4px 6px;text-align:center;white-space:nowrap}
@@ -128,7 +132,7 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .gantt .conflict{background:#fff5f5 !important}
 .load-summary{margin-top:12px}
 
-/* === Табель === */
+/* Табель */
 .timesheet-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px}
 .timesheet-table{border-collapse:collapse;width:100%;min-width:900px}
 .timesheet-table th{background:#f0f0f0;padding:8px 4px;text-align:center;font-size:11px;
@@ -145,7 +149,7 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .timesheet-table td.total-cell{font-weight:bold;background:var(--blue2);color:var(--blue);font-size:13px;cursor:pointer}
 .timesheet-table td.total-cell:hover{background:#bbdefb}
 
-/* === Модалка учёта времени === */
+/* Модалка учёта времени */
 .entry-item{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
 .entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .entry-proj{flex:1;font-weight:bold;color:var(--blue);font-size:13px}
@@ -167,9 +171,11 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 .month-sum-row:hover{background:var(--blue2)}
 .month-sum-row .h{font-weight:bold;color:var(--blue);font-size:16px}
 
-/* === Реестр задач === */
+/* Реестр задач и Таблица проектов */
 .registry-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:13px}
-.registry-table th{background:#f0f0f0;padding:10px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid var(--line)}
+.registry-table th{background:#f0f0f0;padding:10px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid var(--line);user-select:none}
+.registry-table th.sortable{cursor:pointer}
+.registry-table th.sortable:hover{background:#e0e0e0}
 .registry-table td{padding:10px;border-bottom:1px solid #eee;vertical-align:top}
 .registry-table tr:hover{background:#f9f9f9}
 .registry-table .clickable{color:var(--blue);font-weight:bold;cursor:pointer;text-decoration:none}
@@ -280,7 +286,6 @@ const seed = {
       createdAt:dateOffset(-2), plannedStart:dateOffset(-1), plannedEnd:dateOffset(3), stage:'in_progress',
       priority:'normal', estHours:6, factHours:2, dependencies:[], isSupplyTask:false,
       supplyNeeds:[], viewedByAssignee:true, viewedByManager:true, signals:[]},
-    // Пример задачи снабженцу, созданной сварщиком
     {id:'t8', projectId:'p1', title:'Заявка снабжения: Электроды сварочные', assigneeId:'e5', authorId:'e4',
       createdAt:dateOffset(-1), plannedStart:dateOffset(0), plannedEnd:dateOffset(2), stage:'todo',
       priority:'high', estHours:2, factHours:0, dependencies:[], isSupplyTask:true,
@@ -462,12 +467,10 @@ function bindDesk(root){
   root.querySelectorAll('[data-open-task]').forEach(b=>b.onclick=()=>openTask(b.dataset.openTask));
 }
 
-/* ============ РЕЕСТР ЗАДАЧ (НОВОЕ) ============ */
+/* ============ РЕЕСТР ЗАДАЧ ============ */
 function renderRegistry(){
   const v=$('view-registry'); v.innerHTML='';
-  
   v.appendChild(el('h2',{},'📋 Реестр задач (Хронология)'));
-  
   const tb=el('div',{class:'toolbar'});
   tb.innerHTML=`
     <input id="regSearch" placeholder="🔍 Поиск по тексту задачи..." style="width:280px">
@@ -480,14 +483,12 @@ function renderRegistry(){
     </select>
   `;
   v.appendChild(tb);
-  
   const wrap=el('div',{style:'overflow-x:auto'}); v.appendChild(wrap);
   
   function draw(){
     const q = tb.querySelector('#regSearch').value.trim().toLowerCase();
     const st = tb.querySelector('#regStatus').value;
     
-    // Сортируем по дате создания (сначала новые). Если даты нет — в конец.
     let tasks = [...db.tasks].sort((a,b) => {
       const da = a.createdAt || '';
       const db_ = b.createdAt || '';
@@ -538,17 +539,14 @@ function renderRegistry(){
     html += '</tbody></table>';
     wrap.innerHTML = html;
     
-    // Обработчики кликов
     wrap.querySelectorAll('[data-emp]').forEach(el => el.onclick = () => showEmployeeTasksModal(el.dataset.emp));
     wrap.querySelectorAll('[data-proj]').forEach(el => el.onclick = () => openProject(el.dataset.proj));
   }
-  
   tb.querySelector('#regSearch').oninput = draw;
   tb.querySelector('#regStatus').onchange = draw;
   draw();
 }
 
-// Вспомогательная модалка для реестра: показать все задачи сотрудника
 function showEmployeeTasksModal(empId) {
   const e = emp(empId);
   if(!e) return;
@@ -576,11 +574,8 @@ function showEmployeeTasksModal(empId) {
     });
     html += '</tbody></table>';
   }
-  
   c.innerHTML = html;
   $('modalBg').classList.add('open');
-  
-  // Навешиваем обработчики на задачи, чтобы можно было провалиться внутрь
   c.querySelectorAll('[data-open-task]').forEach(el => el.onclick = () => openTask(el.dataset.openTask));
 }
 
@@ -643,44 +638,135 @@ function renderDash(){
   v.querySelectorAll('[data-open-project]').forEach(b=>b.onclick=()=>openProject(b.dataset.openProject));
 }
 
-/* ============ ПРОЕКТЫ ============ */
+/* ============ ПРОЕКТЫ (ПЛИТКИ + ТАБЛИЦА) ============ */
+let projectsViewMode = 'table'; // 'table' или 'tiles'
+let projectsSort = { col: 'code', asc: true };
+
 function renderProjects(){
   const v=$('view-projects'); v.innerHTML='';
+  
   const tb=el('div',{class:'toolbar'});
-  tb.innerHTML=`<select id="fFlow"><option value="">Все потоки</option><option value="external">Внешние заказы</option><option value="stock">СНС (склад)</option></select>
+  tb.innerHTML=`
+    <div style="display:flex;gap:4px;margin-right:12px">
+      <button class="btn ${projectsViewMode==='table'?'primary':''}" id="pvTable">📋 Таблица</button>
+      <button class="btn ${projectsViewMode==='tiles'?'primary':''}" id="pvTiles">🔲 Плитки</button>
+    </div>
+    <select id="fFlow"><option value="">Все потоки</option><option value="external">Внешние заказы</option><option value="stock">СНС (склад)</option></select>
     <select id="fStatus"><option value="">Все статусы</option><option value="team_forming">Формируется</option><option value="awaiting_accept">Ждёт акцепта</option><option value="in_work">В работе</option><option value="done">Завершён</option></select>
     <input id="fSearch" placeholder="🔍 Поиск по названию/клиенту" style="width:260px">
     <button class="btn primary" id="btnNewProject">+ Новый проект</button>
-    <span style="font-size:12px;color:#666" id="projCount"></span>`;
+    <span style="font-size:12px;color:#666;margin-left:auto" id="projCount"></span>
+  `;
   v.appendChild(tb);
-  const list=el('div',{class:'grid g2'}); v.appendChild(list);
-  function draw(){
-    list.innerHTML='';
+  
+  const container=el('div'); v.appendChild(container);
+
+  tb.querySelector('#pvTable').onclick=()=>{ projectsViewMode='table'; renderProjects(); };
+  tb.querySelector('#pvTiles').onclick=()=>{ projectsViewMode='tiles'; renderProjects(); };
+  
+  const draw=()=>{
     const fv=tb.querySelector('#fFlow').value, sv=tb.querySelector('#fStatus').value,
           q=tb.querySelector('#fSearch').value.trim().toLowerCase();
-    const items=db.projects.filter(p=>{
+          
+    let items=db.projects.filter(p=>{
       if(fv && p.flow!==fv)return false;
       if(sv && p.status!==sv)return false;
       if(q && !(p.name.toLowerCase().includes(q)||(p.clientName||'').toLowerCase().includes(q)||(p.code||'').toLowerCase().includes(q)))return false;
       return true;
     });
+    
     tb.querySelector('#projCount').textContent='Всего: '+items.length;
-    if(!items.length){ list.innerHTML='<div class="empty">Проектов нет</div>'; return; }
-    items.forEach(p=>{
-      const c=el('div',{class:'tile '+(p.flow==='stock'?'stock':'')});
-      const accepted=p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
-      const hours = totalHoursForProject(p.id);
-      c.innerHTML=`<div class="title">${esc(p.name)}</div>
-        <div class="code">${esc(p.code)}</div>
-        <div class="sub"><span>${esc(p.clientName||'—')}</span><span>${p.qty} шт</span></div>
-        <div class="sub"><span>⏰ до ${p.dueDate||'—'}</span><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></div>
-        <div class="sub"><span>👥 ${accepted}/${p.team.length} акцептовали</span><span class="badge ${p.status==='in_work'?'green':p.status==='awaiting_accept'?'warn':'blue'}">${statusLabel(p.status)}</span></div>
-        <div class="sub"><span>⏱ трудозатраты</span><span>${hours.toFixed(1)} ч</span></div>`;
-      c.onclick=()=>openProject(p.id);
-      list.appendChild(c);
-    });
-  }
-  tb.querySelector('#fFlow').onchange=draw; tb.querySelector('#fStatus').onchange=draw;
+    
+    if(!items.length){ container.innerHTML='<div class="empty">Проектов нет</div>'; return; }
+
+    if(projectsViewMode === 'tiles') {
+      let html = '<div class="grid g2">';
+      items.forEach(p=>{
+        const accepted=p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
+        const hours = totalHoursForProject(p.id);
+        html += `<div class="tile ${p.flow==='stock'?'stock':''}" data-open-project="${p.id}">
+          <div class="title">${esc(p.name)}</div>
+          <div class="code">${esc(p.code)}</div>
+          <div class="sub"><span>${esc(p.clientName||'—')}</span><span>${p.qty} шт</span></div>
+          <div class="sub"><span>⏰ до ${p.dueDate||'—'}</span><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></div>
+          <div class="sub"><span>👥 ${accepted}/${p.team.length} акцептовали</span><span class="badge ${p.status==='in_work'?'green':p.status==='awaiting_accept'?'warn':'blue'}">${statusLabel(p.status)}</span></div>
+          <div class="sub"><span>⏱ трудозатраты</span><span>${hours.toFixed(1)} ч</span></div>
+        </div>`;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+      container.querySelectorAll('.tile').forEach(el => el.onclick = () => openProject(el.dataset.openProject));
+    } 
+    else {
+      // Сортировка
+      items.sort((a,b) => {
+        let va = a[projectsSort.col], vb = b[projectsSort.col];
+        if(projectsSort.col === 'hours') {
+          va = totalHoursForProject(a.id);
+          vb = totalHoursForProject(b.id);
+        }
+        if (va < vb) return projectsSort.asc ? -1 : 1;
+        if (va > vb) return projectsSort.asc ? 1 : -1;
+        return 0;
+      });
+
+      const sortIcon = (col) => {
+        if(projectsSort.col !== col) return '';
+        return projectsSort.asc ? ' ▲' : ' ▼';
+      };
+
+      let html = `<table class="registry-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="code">Код${sortIcon('code')}</th>
+            <th class="sortable" data-sort="name">Проект${sortIcon('name')}</th>
+            <th class="sortable" data-sort="clientName">Клиент${sortIcon('clientName')}</th>
+            <th class="sortable" data-sort="flow">Поток${sortIcon('flow')}</th>
+            <th class="sortable" data-sort="dueDate">Срок${sortIcon('dueDate')}</th>
+            <th class="sortable" data-sort="status">Статус${sortIcon('status')}</th>
+            <th>Команда (акцепт)</th>
+            <th class="sortable" data-sort="hours">Трудозатраты${sortIcon('hours')}</th>
+          </tr>
+        </thead>
+        <tbody>`;
+        
+      items.forEach(p => {
+        const accepted = p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
+        const hours = totalHoursForProject(p.id);
+        const accHtml = p.team.length > 0 ? `${accepted}/${p.team.length}` : '<span style="color:#999">—</span>';
+        
+        let stBadge = `<span class="badge">${statusLabel(p.status)}</span>`;
+        if(p.status === 'in_work') stBadge = `<span class="badge green">В работе</span>`;
+        if(p.status === 'awaiting_accept') stBadge = `<span class="badge warn">Ждёт акцепта</span>`;
+        
+        html += `<tr style="cursor:pointer" data-open-project="${p.id}">
+          <td style="color:#666;font-family:monospace">${esc(p.code)}</td>
+          <td><b>${esc(p.name)}</b></td>
+          <td>${esc(p.clientName)}</td>
+          <td><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></td>
+          <td style="color:#666">${p.dueDate||'—'}</td>
+          <td>${stBadge}</td>
+          <td>${accHtml}</td>
+          <td>${hours.toFixed(1)} ч</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      
+      container.querySelectorAll('tr[data-open-project]').forEach(tr => tr.onclick = () => openProject(tr.dataset.openProject));
+      container.querySelectorAll('th.sortable').forEach(th => {
+        th.onclick = () => {
+          const col = th.dataset.sort;
+          if(projectsSort.col === col) projectsSort.asc = !projectsSort.asc;
+          else { projectsSort.col = col; projectsSort.asc = true; }
+          draw();
+        };
+      });
+    }
+  };
+
+  tb.querySelector('#fFlow').onchange=draw;
+  tb.querySelector('#fStatus').onchange=draw;
   tb.querySelector('#fSearch').oninput=draw;
   tb.querySelector('#btnNewProject').onclick=newProject;
   draw();
@@ -1357,7 +1443,6 @@ function createTask(pid){
   db.tasks.push(t); saveDB(); closeModal(); toast('Задача создана','success'); openProject(pid);
 }
 
-// НОВАЯ ФУНКЦИЯ: Создание заявки снабженцу от любого сотрудника
 function newSupplyTask(pid) {
   const supplyEmps = db.employees.filter(e => e.role === 'supply');
   if(!supplyEmps.length) { toast('В системе нет сотрудников с ролью "Снабженец"', 'error'); return; }
