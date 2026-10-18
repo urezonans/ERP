@@ -1375,6 +1375,9 @@ function renderSupply(){
           <td style="padding:8px"><span class="clickable" data-open-project="${t.projectId}">${esc(proj(t.projectId)?.name||'')}</span></td></tr>`;
       }).join('')+'</tbody>';
     v.appendChild(tbl);
+    // НАВЕШИВАЕМ ОБРАБОТЧИКИ
+    v.querySelectorAll('[data-open-task]').forEach(el => el.onclick = () => openTask(el.dataset.openTask));
+    v.querySelectorAll('[data-open-project]').forEach(el => el.onclick = () => openProject(el.dataset.openProject));
   }
   v.appendChild(el('h3',{style:'margin-top:18px'},'Работа снабженцев (по табелю)'));
   const supplyEmps=db.employees.filter(e=>e.role==='supply');
