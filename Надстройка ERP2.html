@@ -1371,8 +1371,8 @@ function renderSupply(){
         return `<tr style="border-top:1px solid #eee"><td style="padding:8px">${esc(m?.name||s.materialId)}</td>
           <td style="padding:8px;text-align:center">${s.qty} ${esc(m?.unit||'')}</td>
           <td style="padding:8px;text-align:center"><span class="badge ${s.status==='delivered'?'green':s.status==='ordered'?'warn':'red'}">${({need:'нужно',ordered:'заказано',delivered:'получено'})[s.status]}</span></td>
-          <td style="padding:8px">${esc(t.title)}</td>
-          <td style="padding:8px">${esc(proj(t.projectId)?.name||'')}</td></tr>`;
+          <td style="padding:8px"><span class="clickable" data-open-task="${t.id}">${esc(t.title)}</span></td>
+          <td style="padding:8px"><span class="clickable" data-open-project="${t.projectId}">${esc(proj(t.projectId)?.name||'')}</span></td></tr>`;
       }).join('')+'</tbody>';
     v.appendChild(tbl);
   }
