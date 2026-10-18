@@ -1,0 +1,1422 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цех — управление производством</title>
+<style>
+:root{
+  --blue:#004a99; --blue2:#e3f0ff; --green:#5cb85c; --green2:#e8f5e9;
+  --warn:#e6a817; --warn2:#fffbe6; --red:#d9534f; --red2:#fff5f5;
+  --gray:#888; --bg:#f7f7f7; --card:#fff; --line:#ddd;
+}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:#222}
+header{background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;
+  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:50}
+header h1{font-size:18px;margin:0;color:var(--blue)}
+header .who{display:flex;align-items:center;gap:8px;font-size:13px}
+header select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+main{padding:16px;max-width:1500px;margin:0 auto}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.nav button{padding:8px 14px;border:2px solid var(--line);background:#fff;border-radius:8px;
+  cursor:pointer;font-weight:bold;color:#555;font-size:14px;transition:.15s}
+.nav button:hover{border-color:#999;background:#f5f5f5}
+.nav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.view{display:none}
+.view.active{display:block}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h3{margin:0 0 10px;font-size:15px;color:var(--blue)}
+.kpi{background:#fff;border:1px solid var(--line);border-left:4px solid var(--blue);
+  border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:.15s}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.08)}
+.kpi .v{font-size:30px;font-weight:bold;color:var(--blue)}
+.kpi .l{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.03em}
+.kpi.danger{border-left-color:var(--red)} .kpi.danger .v{color:var(--red)}
+.kpi.warn{border-left-color:var(--warn)} .kpi.warn .v{color:var(--warn)}
+.kpi.ok{border-left-color:var(--green)} .kpi.ok .v{color:var(--green)}
+.tile{background:#fff;border:1px solid var(--line);border-left:4px solid var(--blue);
+  border-radius:8px;padding:12px;cursor:pointer;transition:.15s;position:relative}
+.tile:hover{box-shadow:0 3px 8px rgba(0,0,0,.08);border-color:var(--blue)}
+.tile.stock{border-left-color:var(--warn)}
+.tile .title{font-weight:bold;color:var(--blue);margin-bottom:6px;word-break:break-word}
+.tile .sub{font-size:12px;color:#666;display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+.tile .code{font-size:11px;color:#888;font-family:monospace}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;
+  background:#f0f0f0;color:#555;font-weight:bold}
+.badge.blue{background:var(--blue2);color:var(--blue)}
+.badge.green{background:var(--green2);color:#2e7d32}
+.badge.warn{background:var(--warn2);color:#8a6d00}
+.badge.red{background:var(--red2);color:var(--red)}
+.badge.new{background:var(--red);color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.btn{padding:7px 12px;border:1px solid var(--line);background:#fff;border-radius:6px;
+  cursor:pointer;font-size:13px;font-weight:bold;color:#444;transition:.15s}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.primary:hover{background:#003366}
+.btn.success{background:var(--green);color:#fff;border-color:var(--green)}
+.btn.success:hover{background:#449d44}
+.btn.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+.btn.big{padding:12px 20px;font-size:15px;width:100%}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input,.toolbar select{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.kcol{background:#f5f5f5;border:1px solid var(--line);border-radius:8px;padding:10px;
+  min-width:260px;max-width:260px;flex-shrink:0;display:flex;flex-direction:column;min-height:300px}
+.kcol h4{margin:0 0 10px;font-size:13px;display:flex;justify-content:space-between;
+  border-bottom:2px solid var(--line);padding-bottom:6px}
+.kcol h4 .c{background:#ddd;border-radius:10px;padding:1px 8px;font-size:11px}
+.task{background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:8px;
+  font-size:13px;position:relative}
+.task.new{border-left:4px solid var(--red);background:#fff8f8}
+.task.done{background:var(--green2);border-color:#b7e4c7}
+.task .t{font-weight:bold;margin-bottom:4px;word-break:break-word}
+.task .m{font-size:11px;color:#666;display:flex;flex-direction:column;gap:2px}
+.task .acts{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.task .acts button{font-size:11px;padding:2px 6px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;overflow:auto}
+.modal-bg.open{display:block}
+.modal{background:#fff;max-width:1000px;margin:30px auto;border-radius:12px;padding:18px}
+.modal.large{max-width:1200px}
+.modal h2{margin:0 0 12px;color:var(--blue);font-size:20px}
+.modal .close{float:right;font-size:26px;border:none;background:none;cursor:pointer;line-height:1}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:3px;font-weight:bold}
+.field input,.field select,.field textarea{width:100%;padding:7px 9px;border:1px solid var(--line);
+  border-radius:6px;font-size:13px;font-family:inherit}
+.field textarea{resize:vertical;min-height:60px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+.comment{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:8px;margin-bottom:6px}
+.comment .meta{font-size:11px;color:#777;margin-bottom:3px;display:flex;justify-content:space-between;gap:8px}
+.comment .txt{font-size:13px;white-space:pre-wrap;word-break:break-word}
+.signal{background:var(--red2);border-left:4px solid var(--red);border-radius:6px;
+  padding:8px 10px;margin-bottom:6px;font-size:13px;cursor:pointer}
+.signal:hover{background:#ffe9e9}
+.signal.ok{background:var(--green2);border-left-color:var(--green)}
+.signal.warn{background:var(--warn2);border-left-color:var(--warn)}
+.signal .meta{font-size:11px;color:#777;margin-top:3px}
+.accept-card{background:linear-gradient(135deg,#e3f0ff,#f4f9ff);border:2px solid var(--blue);
+  border-radius:12px;padding:16px;margin-bottom:12px}
+.accept-card h3{margin:0 0 6px;color:var(--blue)}
+.accept-card .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.empty{text-align:center;color:#999;font-style:italic;padding:24px}
+.toast-wrap{position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:360px}
+.toast{background:#fff;border-left:4px solid var(--blue);border-radius:6px;padding:10px 14px;
+  box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:13px;animation:slide .2s}
+.toast.success{border-left-color:var(--green)} .toast.error{border-left-color:var(--red)}
+.toast.warn{border-left-color:var(--warn)}
+@keyframes slide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* === Гант === */
+.gantt{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.gantt table{border-collapse:collapse;width:100%;min-width:900px;font-size:12px}
+.gantt th,.gantt td{border:1px solid #eee;padding:4px 6px;text-align:center;white-space:nowrap}
+.gantt th.name,.gantt td.name{text-align:left;position:sticky;left:0;background:#fff;z-index:2;min-width:200px}
+.gantt td.bar{position:relative;padding:0;height:28px}
+.gantt .bar-fill{position:absolute;top:5px;bottom:5px;border-radius:4px;background:var(--blue);cursor:pointer}
+.gantt .bar-fill.plan{background:#7fb3e8}
+.gantt .bar-fill.done{background:var(--green)}
+.gantt .bar-fill.late{background:var(--red)}
+.gantt .bar-fill.blocked{background:var(--warn)}
+.gantt .bar-fill.overload{outline:2px solid var(--red);outline-offset:-2px}
+.gantt .conflict{background:#fff5f5 !important}
+.load-summary{margin-top:12px}
+
+/* === Табель === */
+.timesheet-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px}
+.timesheet-table{border-collapse:collapse;width:100%;min-width:900px}
+.timesheet-table th{background:#f0f0f0;padding:8px 4px;text-align:center;font-size:11px;
+  font-weight:bold;color:#555;border:1px solid var(--line);position:sticky;top:0;z-index:10}
+.timesheet-table th.emp-col{text-align:left;min-width:200px;position:sticky;left:0;z-index:11;background:#f0f0f0}
+.timesheet-table th.today-col{background:var(--warn2);color:#8a6d00}
+.timesheet-table td{border:1px solid var(--line);padding:4px;text-align:center;font-size:12px}
+.timesheet-table td.emp-cell{text-align:left;font-weight:bold;color:var(--blue);position:sticky;left:0;background:#fff;z-index:5;min-width:200px}
+.timesheet-table td.hours-cell{cursor:pointer;transition:.15s;min-width:52px;height:42px}
+.timesheet-table td.hours-cell:hover{background:var(--blue2)}
+.timesheet-table td.hours-cell.has-hours{background:var(--green2);font-weight:bold;color:#2e7d32}
+.timesheet-table td.hours-cell.today{background:var(--warn2)}
+.timesheet-table td.hours-cell.has-comment{border:2px solid #5bc0de}
+.timesheet-table td.total-cell{font-weight:bold;background:var(--blue2);color:var(--blue);font-size:13px;cursor:pointer}
+.timesheet-table td.total-cell:hover{background:#bbdefb}
+
+/* === Модалка учёта времени === */
+.entry-item{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+.entry-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.entry-proj{flex:1;font-weight:bold;color:var(--blue);font-size:13px}
+.entry-role{font-size:11px;color:#666}
+.entry-hours{width:80px;padding:6px;border:1px solid var(--line);border-radius:6px;font-size:14px;text-align:center}
+.entry-hours:focus{border-color:var(--blue);outline:none}
+.thread{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.thread-msg{background:#fff;border:1px solid #eee;border-radius:6px;padding:6px 8px;margin-bottom:4px;font-size:12px}
+.thread-msg .meta{font-size:11px;color:#888;margin-bottom:2px;display:flex;justify-content:space-between;gap:6px}
+.thread-msg .txt{white-space:pre-wrap;word-break:break-word}
+.thread-add{display:flex;gap:6px;margin-top:6px}
+.thread-add input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px}
+.thread-add button{padding:6px 10px;font-size:12px}
+.entry-total{margin-top:12px;padding:12px;background:var(--blue2);border-radius:8px;
+  text-align:center;font-size:16px;font-weight:bold;color:var(--blue)}
+.entry-total span{font-size:22px}
+.month-sum-row{display:flex;justify-content:space-between;align-items:center;padding:10px;
+  background:#fafafa;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;font-size:13px;cursor:pointer}
+.month-sum-row:hover{background:var(--blue2)}
+.month-sum-row .h{font-weight:bold;color:var(--blue);font-size:16px}
+
+/* === Реестр задач === */
+.registry-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.registry-table th{background:#f0f0f0;padding:10px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid var(--line)}
+.registry-table td{padding:10px;border-bottom:1px solid #eee;vertical-align:top}
+.registry-table tr:hover{background:#f9f9f9}
+.registry-table .clickable{color:var(--blue);font-weight:bold;cursor:pointer;text-decoration:none}
+.registry-table .clickable:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏭 Цех — управление производством</h1>
+  <div class="who">
+    <span>Я —</span>
+    <select id="whoSelect"></select>
+    <button class="btn" id="btnResetDemo" title="Сбросить демо">↺ Демо</button>
+  </div>
+</header>
+
+<main>
+  <div class="nav" id="nav">
+    <button data-view="desk" class="active">🖥️ Рабочий стол</button>
+    <button data-view="registry">📋 Реестр задач</button>
+    <button data-view="dash">📊 Дашборд</button>
+    <button data-view="projects">📁 Проекты</button>
+    <button data-view="gantt">📅 Гант</button>
+    <button data-view="timesheet">⏱️ Табель</button>
+    <button data-view="supply">📦 Снабжение</button>
+    <button data-view="people">👷 Люди</button>
+  </div>
+
+  <div class="view active" id="view-desk"></div>
+  <div class="view" id="view-registry"></div>
+  <div class="view" id="view-dash"></div>
+  <div class="view" id="view-projects"></div>
+  <div class="view" id="view-gantt"></div>
+  <div class="view" id="view-timesheet"></div>
+  <div class="view" id="view-supply"></div>
+  <div class="view" id="view-people"></div>
+</main>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal large" id="modalContent"></div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+/* ============ ДЕМО-ДАННЫЕ ============ */
+const LS_KEY = 'cex_demo_v3';
+function dateOffset(d){ const x=new Date(); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10); }
+
+const seed = {
+  employees: [
+    {id:'e1', name:'Петров Пётр Петрович',   position:'Руководитель производства', role:'manager', active:true},
+    {id:'e2', name:'Иванов Иван Иванович',   position:'Мастер участка',            role:'master',  active:true},
+    {id:'e3', name:'Сидоров Сидор Сидорович',position:'Токарь',                    role:'worker',  active:true},
+    {id:'e4', name:'Кузнецов Алексей',       position:'Сварщик',                   role:'worker',  active:true},
+    {id:'e5', name:'Смирнова Ольга',         position:'Снабженец',                 role:'supply',  active:true},
+    {id:'e6', name:'Орлов Дмитрий',          position:'Сборщик',                   role:'worker',  active:true},
+    {id:'e7', name:'Зайцева Анна',           position:'ОТК',                       role:'qc',      active:true}
+  ],
+  projects: [
+    {id:'p1', code:'ЗК-2025-0001', flow:'external', name:'Металлоконструкция МК-12',
+      clientName:'ООО «СтройМет»', qty:1, dueDate:dateOffset(14), startDate:dateOffset(-3),
+      status:'awaiting_accept', managerId:'e1', team:['e2','e3','e4','e6'],
+      acceptedBy:{ e2:{at:new Date().toISOString(), byName:'Иванов Иван Иванович'} },
+      description:'Изготовление металлоконструкции по чертежу заказчика.'},
+    {id:'p2', code:'ЗК-2025-0002', flow:'external', name:'Ёмкость 5 м³',
+      clientName:'АО «НефтеХим»', qty:2, dueDate:dateOffset(30), startDate:dateOffset(-1),
+      status:'in_work', managerId:'e2', team:['e3','e4','e6','e7'],
+      acceptedBy:{ e3:{at:new Date().toISOString(), byName:'Сидоров Сидор Сидорович'},
+                   e4:{at:new Date().toISOString(), byName:'Кузнецов Алексей'} },
+      description:'Две ёмкости из нержавейки, сварка аргоном.'},
+    {id:'p3', code:'СНС-2025-0007', flow:'stock', name:'Партия кронштейнов КР-5',
+      clientName:'Склад', qty:100, dueDate:dateOffset(7), startDate:dateOffset(-5),
+      status:'team_forming', managerId:'e1', team:['e3','e6'],
+      acceptedBy:{}, description:'Стандартное изделие, на склад.'}
+  ],
+  tasks: [
+    {id:'t1', projectId:'p1', title:'Резка металла по чертежу', assigneeId:'e3', authorId:'e1',
+      createdAt:dateOffset(-5), plannedStart:dateOffset(-2), plannedEnd:dateOffset(1), stage:'in_progress',
+      priority:'high', estHours:8, factHours:3, dependencies:[], isSupplyTask:false,
+      supplyNeeds:[{materialId:'m1', qty:200, status:'delivered'}],
+      viewedByAssignee:true, viewedByManager:true, signals:[]},
+    {id:'t2', projectId:'p1', title:'Сварка каркаса', assigneeId:'e4', authorId:'e1',
+      createdAt:dateOffset(-4), plannedStart:dateOffset(2), plannedEnd:dateOffset(6), stage:'todo',
+      priority:'high', estHours:16, factHours:0, dependencies:['t1'], isSupplyTask:false,
+      supplyNeeds:[{materialId:'m2', qty:10, status:'need'}],
+      viewedByAssignee:false, viewedByManager:true,
+      signals:[{id:'s1', type:'new', text:'Новая задача от руководителя', at:new Date().toISOString(), read:false}]},
+    {id:'t3', projectId:'p1', title:'Сборка и окраска', assigneeId:'e6', authorId:'e1',
+      createdAt:dateOffset(-3), plannedStart:dateOffset(6), plannedEnd:dateOffset(10), stage:'todo',
+      priority:'normal', estHours:12, factHours:0, dependencies:['t2'], isSupplyTask:false,
+      supplyNeeds:[], viewedByAssignee:false, viewedByManager:true, signals:[]},
+    {id:'t4', projectId:'p2', title:'Подготовка листов', assigneeId:'e3', authorId:'e2',
+      createdAt:dateOffset(-2), plannedStart:dateOffset(-1), plannedEnd:dateOffset(2), stage:'in_progress',
+      priority:'normal', estHours:10, factHours:4, dependencies:[], isSupplyTask:false,
+      supplyNeeds:[], viewedByAssignee:true, viewedByManager:true, signals:[]},
+    {id:'t5', projectId:'p2', title:'Сварка ёмкостей', assigneeId:'e4', authorId:'e2',
+      createdAt:dateOffset(-1), plannedStart:dateOffset(3), plannedEnd:dateOffset(9), stage:'todo',
+      priority:'high', estHours:24, factHours:0, dependencies:['t4'], isSupplyTask:false,
+      supplyNeeds:[{materialId:'m2', qty:20, status:'ordered'}],
+      viewedByAssignee:false, viewedByManager:true, signals:[]},
+    {id:'t6', projectId:'p2', title:'ОТК сварных швов', assigneeId:'e7', authorId:'e2',
+      createdAt:dateOffset(-1), plannedStart:dateOffset(9), plannedEnd:dateOffset(11), stage:'todo',
+      priority:'normal', estHours:4, factHours:0, dependencies:['t5'], isSupplyTask:false,
+      supplyNeeds:[], viewedByAssignee:false, viewedByManager:true, signals:[]},
+    {id:'t7', projectId:'p3', title:'Гибка кронштейнов', assigneeId:'e3', authorId:'e1',
+      createdAt:dateOffset(-2), plannedStart:dateOffset(-1), plannedEnd:dateOffset(3), stage:'in_progress',
+      priority:'normal', estHours:6, factHours:2, dependencies:[], isSupplyTask:false,
+      supplyNeeds:[], viewedByAssignee:true, viewedByManager:true, signals:[]},
+    // Пример задачи снабженцу, созданной сварщиком
+    {id:'t8', projectId:'p1', title:'Заявка снабжения: Электроды сварочные', assigneeId:'e5', authorId:'e4',
+      createdAt:dateOffset(-1), plannedStart:dateOffset(0), plannedEnd:dateOffset(2), stage:'todo',
+      priority:'high', estHours:2, factHours:0, dependencies:[], isSupplyTask:true,
+      supplyNeeds:[{materialId:'m2', qty:15, status:'need'}],
+      viewedByAssignee:false, viewedByManager:true, signals:[]}
+  ],
+  materials: [
+    {id:'m1', name:'Лист стальной 2 мм', sku:'LS-2', unit:'кг', qtyOnHand:1200, minQty:200},
+    {id:'m2', name:'Электроды сварочные', sku:'EL-3', unit:'кг', qtyOnHand:35, minQty:15}
+  ],
+  comments: [
+    {id:'c1', taskId:'t1', projectId:'p1', authorId:'e3', text:'Начал резку, металл в норме.', at:new Date().toISOString()}
+  ],
+  timesheet: [
+    {id:'ts1', employeeId:'e3', date:dateOffset(-2), entries:[
+      {projectId:'p1', role:'assignee', hours:4, thread:[
+        {id:'m1', authorId:'e3', at:new Date(Date.now()-86400000).toISOString(), text:'Резка металла, 4 часа. Всё по плану.'},
+        {id:'m2', authorId:'e2', at:new Date(Date.now()-80000000).toISOString(), text:'Принято. Завтра доделай кромку.'}
+      ]}
+    ]},
+    {id:'ts2', employeeId:'e5', date:dateOffset(-1), entries:[
+      {projectId:'p2', role:'supply', hours:2, thread:[
+        {id:'m3', authorId:'e5', at:new Date(Date.now()-43200000).toISOString(), text:'Заказала электроды на p2, ждём поставку.'}
+      ]}
+    ]}
+  ]
+};
+
+function loadDB(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return JSON.parse(JSON.stringify(seed));
+}
+function saveDB(){ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+let db = loadDB();
+let currentUserId = db.employees[0].id;
+
+/* ============ УТИЛИТЫ ============ */
+const $ = id => document.getElementById(id);
+function el(tag,attrs={},html=''){ const e=document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v])=>{ if(k==='class')e.className=v; else e.setAttribute(k,v); });
+  if(html) e.innerHTML=html; return e; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function shortName(f){ if(!f)return '—'; const p=f.trim().split(/\s+/); if(p.length<2)return p[0]; return p[0]+' '+p[1][0]+'.'+(p[2]?p[2][0]+'.':''); }
+function emp(id){ return db.employees.find(e=>e.id===id); }
+function proj(id){ return db.projects.find(p=>p.id===id); }
+function task(id){ return db.tasks.find(t=>t.id===id); }
+function mat(id){ return db.materials.find(m=>m.id===id); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+function isLate(t){ if(!t.plannedEnd||t.stage==='done')return false; return daysBetween(today(), t.plannedEnd)<0; }
+function toast(msg,type='info'){ const w=$('toasts'); const e=document.createElement('div');
+  e.className='toast '+type; e.textContent=msg; w.appendChild(e);
+  setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),350);},3000); }
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+/* ============ КТО Я ============ */
+function renderWho(){
+  const sel=$('whoSelect'); sel.innerHTML='';
+  db.employees.forEach(e=>{ const o=document.createElement('option'); o.value=e.id;
+    o.textContent=shortName(e.name)+' — '+(e.role==='manager'?'рук.':e.role==='master'?'мастер':e.role==='supply'?'снабж.':e.role==='qc'?'ОТК':'рабочий');
+    sel.appendChild(o); });
+  sel.value=currentUserId;
+  sel.onchange=()=>{ currentUserId=sel.value; renderAll(); };
+}
+function me(){ return emp(currentUserId); }
+function isManager(){ return me() && (me().role==='manager'||me().role==='master'); }
+
+/* ============ СИГНАЛЫ ============ */
+function pushSignal(taskId, type, text){
+  const t=task(taskId); if(!t)return;
+  t.signals=t.signals||[];
+  t.signals.push({id:'s'+Date.now(), type, text, at:new Date().toISOString(), read:false});
+  saveDB();
+}
+function unreadSignalsFor(userId){
+  return db.tasks.flatMap(t=> (t.signals||[]).filter(s=>!s.read).map(s=>({...s, taskId:t.id})))
+    .filter(s=>{ const t=task(s.taskId); if(!t)return false;
+      if(t.assigneeId===userId) return true;
+      const p=proj(t.projectId); return p && p.managerId===userId; });
+}
+
+/* ============ РАБОЧИЙ СТОЛ ============ */
+function renderDesk(){
+  const v=$('view-desk'); v.innerHTML='';
+  const user=me();
+  const needAccept = db.projects.filter(p=> p.team.includes(user.id) && !(p.acceptedBy&&p.acceptedBy[user.id])
+    && (p.status==='awaiting_accept'||p.status==='team_forming'));
+  if(needAccept.length){
+    v.appendChild(el('h2',{},'🔔 Заказы, ожидающие вашего акцепта'));
+    needAccept.forEach(p=>{
+      const c=el('div',{class:'accept-card'});
+      c.innerHTML=`<h3>${esc(p.name)} <span class="badge blue">${p.flow==='external'?'Внешний':'СНС'}</span></h3>
+        <div style="font-size:13px;color:#555">${esc(p.code)} • Клиент: <b>${esc(p.clientName)}</b> • Кол-во: ${p.qty} • Срок: ${p.dueDate||'—'}</div>
+        <div style="font-size:13px;color:#555;margin-top:4px">Руководитель: <b>${esc(emp(p.managerId)?.name||'—')}</b></div>
+        <div class="actions">
+          <button class="btn success big" data-accept="${p.id}">✓ Взял заказ</button>
+          <button class="btn" data-decline="${p.id}">Не могу участвовать</button>
+        </div>`;
+      v.appendChild(c);
+    });
+  } else {
+    v.appendChild(el('div',{class:'card'},'<h3>Акцепты</h3><div class="empty">Нет заказов, ожидающих вашего подтверждения.</div>'));
+  }
+  const myTasks = db.tasks.filter(t=>t.assigneeId===user.id && t.stage!=='done');
+  v.appendChild(el('h2',{style:'margin-top:18px'},'📋 Мои задачи'));
+  if(!myTasks.length){ v.appendChild(el('div',{class:'empty'},'Активных задач нет.')); }
+  else {
+    const grid=el('div',{class:'grid g2'});
+    myTasks.forEach(t=>{
+      const p=proj(t.projectId);
+      const isNew = !t.viewedByAssignee;
+      const card=el('div',{class:'card'});
+      card.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+          <div><div style="font-weight:bold;color:var(--blue)">${esc(t.title)}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">${esc(p?.name||'')} ${isNew?'<span class="badge new">🔔 NEW</span>':''}</div></div>
+          <span class="badge ${t.stage==='blocked'?'red':t.stage==='in_progress'?'warn':'blue'}">${stageLabel(t.stage)}</span>
+        </div>
+        <div style="font-size:12px;color:#666;margin-top:8px">📅 План: ${t.plannedStart||'—'} → ${t.plannedEnd||'—'} ${isLate(t)?'<span class="badge red">просрочено</span>':''}</div>
+        <div style="font-size:12px;color:#666">⏱ План ${t.estHours||0} ч, факт ${t.factHours||0} ч</div>
+        ${(t.signals||[]).filter(s=>!s.read).length?`<div style="margin-top:6px">${t.signals.filter(s=>!s.read).map(s=>`<span class="badge red">🔔 ${esc(s.text)}</span>`).join(' ')}</div>`:''}
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn primary" data-open-task="${t.id}">Открыть</button>
+          ${t.stage==='todo'?`<button class="btn warn" data-stage="${t.id}:in_progress">▶ Начал</button>`:''}
+          ${t.stage==='in_progress'?`<button class="btn success" data-stage="${t.id}:done">✓ Готово</button>
+            <button class="btn" data-stage="${t.id}:blocked">⚠ Проблема</button>`:''}
+        </div>`;
+      grid.appendChild(card);
+    });
+    v.appendChild(grid);
+  }
+  const sigs = unreadSignalsFor(user.id);
+  if(sigs.length){
+    v.appendChild(el('h2',{style:'margin-top:18px'},'📡 Сигналы'));
+    sigs.slice(0,10).forEach(s=>{
+      const t=task(s.taskId); if(!t)return;
+      const div=el('div',{class:'signal '+(s.type==='done'?'ok':s.type==='problem'?'warn':'')});
+      div.innerHTML=`<div>${esc(s.text)} — <b>${esc(t.title)}</b></div>
+        <div class="meta">${esc(proj(t.projectId)?.name||'')} • ${new Date(s.at).toLocaleString('ru-RU')} • ${esc(emp(t.assigneeId)?.name||'')}</div>`;
+      div.onclick=()=>{ const tt=task(s.taskId); tt.signals.forEach(x=>{if(x.id===s.id)x.read=true;}); saveDB(); renderAll(); };
+      v.appendChild(div);
+    });
+  }
+  v.appendChild(el('h2',{style:'margin-top:18px'},'📊 Кратко'));
+  const kpi=el('div',{class:'grid g3'});
+  const myProj = db.projects.filter(p=>p.team.includes(user.id));
+  kpi.innerHTML=`
+    <div class="kpi"><div class="v">${myProj.length}</div><div class="l">Моих проектов</div></div>
+    <div class="kpi ok"><div class="v">${db.tasks.filter(t=>t.assigneeId===user.id&&t.stage==='done').length}</div><div class="l">Выполнено задач</div></div>
+    <div class="kpi warn"><div class="v">${db.tasks.filter(t=>t.assigneeId===user.id&&t.stage==='in_progress').length}</div><div class="l">В работе</div></div>
+    <div class="kpi danger"><div class="v">${db.tasks.filter(t=>t.assigneeId===user.id&&isLate(t)).length}</div><div class="l">Просрочено</div></div>`;
+  v.appendChild(kpi);
+  bindDesk(v);
+}
+function stageLabel(s){ return {todo:'К выполнению',in_progress:'В работе',review:'Проверка',done:'Готово',blocked:'Заблокировано'}[s]||s; }
+function bindDesk(root){
+  root.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>{
+    const p=proj(b.dataset.accept); p.acceptedBy=p.acceptedBy||{};
+    p.acceptedBy[currentUserId]={at:new Date().toISOString(), byName:me().name};
+    if(p.team.every(id=>p.acceptedBy[id])) p.status='in_work';
+    saveDB(); toast('Вы взяли заказ: '+p.name,'success'); renderAll();
+  });
+  root.querySelectorAll('[data-decline]').forEach(b=>b.onclick=()=>{
+    const p=proj(b.dataset.decline);
+    if(!confirm('Отказаться от участия в заказе «'+p.name+'»?\nРуководитель получит сигнал.'))return;
+    p.team=p.team.filter(id=>id!==currentUserId);
+    pushSignal(p.id==='p1'?'t2':'t5','problem','Участник отказался от заказа: '+me().name);
+    saveDB(); toast('Сигнал отправлен руководителю','warn'); renderAll();
+  });
+  root.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>{
+    const [tid,stage]=b.dataset.stage.split(':'); const t=task(tid);
+    if(!t)return;
+    t.stage=stage; t.viewedByAssignee=true;
+    if(stage==='done'){ t.factEnd=today(); pushSignal(tid,'done','Задача выполнена: '+t.title); }
+    if(stage==='in_progress'){ t.factStart=today(); pushSignal(tid,'info','Начата задача: '+t.title); }
+    if(stage==='blocked'){ pushSignal(tid,'problem','ПРОБЛЕМА по задаче: '+t.title); }
+    saveDB(); toast('Статус обновлён','success'); renderAll();
+  });
+  root.querySelectorAll('[data-open-task]').forEach(b=>b.onclick=()=>openTask(b.dataset.openTask));
+}
+
+/* ============ РЕЕСТР ЗАДАЧ (НОВОЕ) ============ */
+function renderRegistry(){
+  const v=$('view-registry'); v.innerHTML='';
+  
+  v.appendChild(el('h2',{},'📋 Реестр задач (Хронология)'));
+  
+  const tb=el('div',{class:'toolbar'});
+  tb.innerHTML=`
+    <input id="regSearch" placeholder="🔍 Поиск по тексту задачи..." style="width:280px">
+    <select id="regStatus">
+      <option value="">Все статусы</option>
+      <option value="todo">К выполнению</option>
+      <option value="in_progress">В работе</option>
+      <option value="blocked">Заблокировано</option>
+      <option value="done">Выполнено</option>
+    </select>
+  `;
+  v.appendChild(tb);
+  
+  const wrap=el('div',{style:'overflow-x:auto'}); v.appendChild(wrap);
+  
+  function draw(){
+    const q = tb.querySelector('#regSearch').value.trim().toLowerCase();
+    const st = tb.querySelector('#regStatus').value;
+    
+    // Сортируем по дате создания (сначала новые). Если даты нет — в конец.
+    let tasks = [...db.tasks].sort((a,b) => {
+      const da = a.createdAt || '';
+      const db_ = b.createdAt || '';
+      return db_.localeCompare(da);
+    });
+    
+    tasks = tasks.filter(t => {
+      if(st && t.stage !== st) return false;
+      if(q && !t.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    
+    if(!tasks.length) { wrap.innerHTML = '<div class="empty">Задач не найдено</div>'; return; }
+    
+    let html = '<table class="registry-table"><thead><tr>' +
+      '<th style="width:90px">Дата</th>' +
+      '<th>Кто поставил</th>' +
+      '<th>Кому (Исполнитель)</th>' +
+      '<th>Задача</th>' +
+      '<th>Проект</th>' +
+      '<th>Статус</th>' +
+      '</tr></thead><tbody>';
+      
+    tasks.forEach(t => {
+      const author = emp(t.authorId) || {name:'Система'};
+      const assignee = emp(t.assigneeId) || {name:'—'};
+      const p = proj(t.projectId) || {name:'—'};
+      
+      let stBadge = `<span class="badge">${stageLabel(t.stage)}</span>`;
+      if(t.stage === 'done') stBadge = `<span class="badge green">Готово</span>`;
+      if(t.stage === 'in_progress') stBadge = `<span class="badge warn">В работе</span>`;
+      if(t.stage === 'blocked') stBadge = `<span class="badge red">Блок</span>`;
+      
+      const supplyIcon = t.isSupplyTask ? '📦 ' : '';
+      
+      html += `<tr>
+        <td style="color:#666">${t.createdAt || '—'}</td>
+        <td><span class="clickable" data-emp="${t.authorId}">${esc(shortName(author.name))}</span></td>
+        <td><span class="clickable" data-emp="${t.assigneeId}">${esc(shortName(assignee.name))}</span></td>
+        <td>
+          <div style="font-weight:bold">${supplyIcon}${esc(t.title)}</div>
+          ${t.stage === 'done' ? '<div style="font-size:11px;color:var(--green)">Выполнено</div>' : ''}
+        </td>
+        <td><span class="clickable" data-proj="${t.projectId}">${esc(p.name)}</span></td>
+        <td>${stBadge}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    
+    // Обработчики кликов
+    wrap.querySelectorAll('[data-emp]').forEach(el => el.onclick = () => showEmployeeTasksModal(el.dataset.emp));
+    wrap.querySelectorAll('[data-proj]').forEach(el => el.onclick = () => openProject(el.dataset.proj));
+  }
+  
+  tb.querySelector('#regSearch').oninput = draw;
+  tb.querySelector('#regStatus').onchange = draw;
+  draw();
+}
+
+// Вспомогательная модалка для реестра: показать все задачи сотрудника
+function showEmployeeTasksModal(empId) {
+  const e = emp(empId);
+  if(!e) return;
+  const tasks = db.tasks.filter(t => t.assigneeId === empId || t.authorId === empId)
+    .sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+    
+  const c = $('modalContent');
+  let html = `<button class="close" onclick="closeModal()">×</button>
+    <h2>Задачи сотрудника: ${esc(e.name)}</h2>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Всего задач: ${tasks.length}</div>`;
+    
+  if(!tasks.length) {
+    html += '<div class="empty">Задач нет</div>';
+  } else {
+    html += '<table class="registry-table"><thead><tr><th>Дата</th><th>Роль</th><th>Задача</th><th>Статус</th></tr></thead><tbody>';
+    tasks.forEach(t => {
+      const isAssignee = t.assigneeId === empId;
+      const role = isAssignee ? '<span class="badge blue">Исполнитель</span>' : '<span class="badge">Поставил</span>';
+      html += `<tr>
+        <td>${t.createdAt||'—'}</td>
+        <td>${role}</td>
+        <td><span class="clickable" data-open-task="${t.id}">${esc(t.title)}</span></td>
+        <td><span class="badge">${stageLabel(t.stage)}</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  
+  c.innerHTML = html;
+  $('modalBg').classList.add('open');
+  
+  // Навешиваем обработчики на задачи, чтобы можно было провалиться внутрь
+  c.querySelectorAll('[data-open-task]').forEach(el => el.onclick = () => openTask(el.dataset.openTask));
+}
+
+/* ============ ДАШБОРД ============ */
+function renderDash(){
+  const v=$('view-dash'); v.innerHTML='';
+  const user=me();
+  const activeProjects = db.projects.filter(p=>p.status!=='done');
+  const lateTasks = db.tasks.filter(isLate);
+  const blocked = db.tasks.filter(t=>t.stage==='blocked');
+  const needAccept = db.projects.filter(p=>p.status==='awaiting_accept');
+  const unacceptedMembers = needAccept.reduce((s,p)=>s+p.team.filter(id=>!(p.acceptedBy&&p.acceptedBy[id])).length,0);
+  const sigs = unreadSignalsFor(user.id);
+
+  v.appendChild(el('h2',{},'📊 Ключевые показатели'));
+  const k=el('div',{class:'grid g3'});
+  k.innerHTML=`
+    <div class="kpi"><div class="v">${activeProjects.length}</div><div class="l">Активных проектов</div></div>
+    <div class="kpi warn"><div class="v">${needAccept.length}</div><div class="l">Ждут акцепта</div></div>
+    <div class="kpi danger"><div class="v">${lateTasks.length}</div><div class="l">Просрочено задач</div></div>
+    <div class="kpi danger"><div class="v">${blocked.length}</div><div class="l">Заблокировано</div></div>
+    <div class="kpi ok"><div class="v">${sigs.length}</div><div class="l">Новых сигналов</div></div>
+    <div class="kpi"><div class="v">${unacceptedMembers}</div><div class="l">Не акцептовали</div></div>`;
+  v.appendChild(k);
+
+  v.appendChild(el('h3',{style:'margin-top:18px'},'📡 Свежие сигналы'));
+  if(!sigs.length){ v.appendChild(el('div',{class:'empty'},'Сигналов нет — всё спокойно.')); }
+  else sigs.slice(0,12).forEach(s=>{
+    const t=task(s.taskId); if(!t)return;
+    const d=el('div',{class:'signal '+(s.type==='done'?'ok':s.type==='problem'?'warn':'')});
+    d.innerHTML=`<div>${esc(s.text)} — <b>${esc(t.title)}</b></div>
+      <div class="meta">${esc(proj(t.projectId)?.name||'')} • ${new Date(s.at).toLocaleString('ru-RU')} • ${esc(emp(t.assigneeId)?.name||'')}</div>`;
+    d.onclick=()=>{ t.signals.forEach(x=>{if(x.id===s.id)x.read=true;}); saveDB(); renderAll(); };
+    v.appendChild(d);
+  });
+
+  v.appendChild(el('h3',{style:'margin-top:18px'},'⏳ Ждут акцепта команды'));
+  if(!needAccept.length){ v.appendChild(el('div',{class:'empty'},'Все команды акцептовали свои заказы.')); }
+  else needAccept.forEach(p=>{
+    const missing = p.team.filter(id=>!(p.acceptedBy&&p.acceptedBy[id]));
+    const c=el('div',{class:'card'});
+    c.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px">
+      <div><b>${esc(p.name)}</b> <span class="badge blue">${p.flow==='external'?'Внешний':'СНС'}</span>
+      <div style="font-size:12px;color:#666">${esc(p.code)} • ${esc(p.clientName)}</div></div>
+      <button class="btn primary" data-open-project="${p.id}">Открыть</button></div>
+      <div style="font-size:13px;margin-top:8px">Не акцептовали (${missing.length}): ${missing.map(id=>esc(shortName(emp(id)?.name))).join(', ')||'—'}</div>`;
+    v.appendChild(c);
+  });
+
+  v.appendChild(el('h3',{style:'margin-top:18px'},'🔥 Просроченные задачи'));
+  if(!lateTasks.length){ v.appendChild(el('div',{class:'empty'},'Просрочек нет.')); }
+  else lateTasks.forEach(t=>{
+    const d=el('div',{class:'signal warn'});
+    d.innerHTML=`<div><b>${esc(t.title)}</b> — ${esc(emp(t.assigneeId)?.name||'')}</div>
+      <div class="meta">${esc(proj(t.projectId)?.name||'')} • срок ${t.plannedEnd} • ${Math.abs(daysBetween(today(),t.plannedEnd))} дн. просрочки</div>`;
+    d.onclick=()=>openTask(t.id);
+    v.appendChild(d);
+  });
+
+  v.querySelectorAll('[data-open-project]').forEach(b=>b.onclick=()=>openProject(b.dataset.openProject));
+}
+
+/* ============ ПРОЕКТЫ ============ */
+function renderProjects(){
+  const v=$('view-projects'); v.innerHTML='';
+  const tb=el('div',{class:'toolbar'});
+  tb.innerHTML=`<select id="fFlow"><option value="">Все потоки</option><option value="external">Внешние заказы</option><option value="stock">СНС (склад)</option></select>
+    <select id="fStatus"><option value="">Все статусы</option><option value="team_forming">Формируется</option><option value="awaiting_accept">Ждёт акцепта</option><option value="in_work">В работе</option><option value="done">Завершён</option></select>
+    <input id="fSearch" placeholder="🔍 Поиск по названию/клиенту" style="width:260px">
+    <button class="btn primary" id="btnNewProject">+ Новый проект</button>
+    <span style="font-size:12px;color:#666" id="projCount"></span>`;
+  v.appendChild(tb);
+  const list=el('div',{class:'grid g2'}); v.appendChild(list);
+  function draw(){
+    list.innerHTML='';
+    const fv=tb.querySelector('#fFlow').value, sv=tb.querySelector('#fStatus').value,
+          q=tb.querySelector('#fSearch').value.trim().toLowerCase();
+    const items=db.projects.filter(p=>{
+      if(fv && p.flow!==fv)return false;
+      if(sv && p.status!==sv)return false;
+      if(q && !(p.name.toLowerCase().includes(q)||(p.clientName||'').toLowerCase().includes(q)||(p.code||'').toLowerCase().includes(q)))return false;
+      return true;
+    });
+    tb.querySelector('#projCount').textContent='Всего: '+items.length;
+    if(!items.length){ list.innerHTML='<div class="empty">Проектов нет</div>'; return; }
+    items.forEach(p=>{
+      const c=el('div',{class:'tile '+(p.flow==='stock'?'stock':'')});
+      const accepted=p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
+      const hours = totalHoursForProject(p.id);
+      c.innerHTML=`<div class="title">${esc(p.name)}</div>
+        <div class="code">${esc(p.code)}</div>
+        <div class="sub"><span>${esc(p.clientName||'—')}</span><span>${p.qty} шт</span></div>
+        <div class="sub"><span>⏰ до ${p.dueDate||'—'}</span><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></div>
+        <div class="sub"><span>👥 ${accepted}/${p.team.length} акцептовали</span><span class="badge ${p.status==='in_work'?'green':p.status==='awaiting_accept'?'warn':'blue'}">${statusLabel(p.status)}</span></div>
+        <div class="sub"><span>⏱ трудозатраты</span><span>${hours.toFixed(1)} ч</span></div>`;
+      c.onclick=()=>openProject(p.id);
+      list.appendChild(c);
+    });
+  }
+  tb.querySelector('#fFlow').onchange=draw; tb.querySelector('#fStatus').onchange=draw;
+  tb.querySelector('#fSearch').oninput=draw;
+  tb.querySelector('#btnNewProject').onclick=newProject;
+  draw();
+}
+function statusLabel(s){ return {draft:'Черновик',team_forming:'Формируется',awaiting_accept:'Ждёт акцепта',in_work:'В работе',done:'Завершён',paused:'Пауза'}[s]||s; }
+
+/* ============ КАРТОЧКА ПРОЕКТА ============ */
+function openProject(id){
+  const p=proj(id); if(!p)return;
+  const m=$('modalBg'), c=$('modalContent');
+  const accepted=p.team.filter(x=>p.acceptedBy&&p.acceptedBy[x]).length;
+  const hours = totalHoursForProject(p.id);
+  const people = hoursByPeopleForProject(p.id);
+  let html=`<button class="close" onclick="closeModal()">×</button>
+    <h2>${esc(p.name)} <span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний заказ':'СНС'}</span></h2>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">${esc(p.code)} • Клиент: <b>${esc(p.clientName)}</b> • Кол-во: ${p.qty} • Срок: ${p.dueDate||'—'} • Статус: <b>${statusLabel(p.status)}</b></div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="card"><h3>Команда (${accepted}/${p.team.length} акцептовали)</h3>
+        ${p.team.map(uid=>{ const a=p.acceptedBy&&p.acceptedBy[uid];
+          return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dotted #eee;font-size:13px">
+            <span>${esc(emp(uid)?.name||uid)}</span>
+            ${a?'<span class="badge green">✓ Взял '+new Date(a.at).toLocaleDateString('ru-RU')+'</span>':'<span class="badge warn">⏳ ждёт</span>'}</div>`;
+        }).join('')||'<div class="empty">Команда не назначена</div>'}
+        ${isManager()?`<button class="btn" style="margin-top:8px" onclick="editTeam('${p.id}')">✏️ Изменить команду</button>`:''}
+      </div>
+      <div class="card"><h3>Описание</h3><div style="font-size:13px;white-space:pre-wrap">${esc(p.description||'—')}</div>
+        <div style="font-size:12px;color:#666;margin-top:8px">Руководитель: <b>${esc(emp(p.managerId)?.name||'—')}</b></div>
+        <div style="margin-top:8px;font-size:13px">⏱ <b>Трудозатраты: ${hours.toFixed(1)} ч</b></div>
+        ${people.length?`<div style="font-size:12px;color:#666;margin-top:4px">${people.map(x=>`${esc(shortName(x.name))}: ${x.hours.toFixed(1)} ч`).join(' • ')}</div>`:''}
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          ${isManager()?`<button class="btn success" onclick="newTask('${p.id}')">+ Задача</button>`:''}
+          <button class="btn warn" onclick="newSupplyTask('${p.id}')">+ Заявка снабженцу</button>
+        </div>
+      </div>
+    </div>
+    <h3>Канбан задач</h3>
+    <div class="kanban" id="kanban"></div>`;
+  c.innerHTML=html;
+  m.classList.add('open');
+  drawKanban(p.id);
+}
+function drawKanban(pid){
+  const k=$('kanban'); if(!k)return;
+  const stages=[['todo','К выполнению'],['in_progress','В работе'],['review','Проверка'],['blocked','Заблокировано'],['done','Готово']];
+  const tasks=db.tasks.filter(t=>t.projectId===pid);
+  k.innerHTML=stages.map(([s,label])=>{
+    const arr=tasks.filter(t=>t.stage===s);
+    return `<div class="kcol"><h4>${label} <span class="c">${arr.length}</span></h4>
+      ${arr.map(t=>taskCard(t)).join('')||'<div class="empty" style="padding:12px">Пусто</div>'}</div>`;
+  }).join('');
+  k.querySelectorAll('[data-open-task]').forEach(b=>b.onclick=()=>openTask(b.dataset.openTask));
+  k.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{
+    const [tid,st]=b.dataset.move.split(':'); const t=task(tid); if(!t)return;
+    t.stage=st; if(st==='in_progress'&&!t.factStart)t.factStart=today();
+    if(st==='done'){t.factEnd=today();pushSignal(tid,'done','Задача выполнена: '+t.title);}
+    saveDB(); drawKanban(pid); toast('Перемещено','success');
+  });
+}
+function taskCard(t){
+  const isNew=!t.viewedByAssignee;
+  const supplyIcon = t.isSupplyTask ? '📦 ' : '';
+  return `<div class="task ${t.stage==='done'?'done':''} ${isNew?'new':''}" data-open-task="${t.id}" style="cursor:pointer">
+    <div class="t">${supplyIcon}${esc(t.title)} ${isNew?'<span class="badge new">🔔</span>':''}</div>
+    <div class="m">
+      <span>👤 ${esc(shortName(emp(t.assigneeId)?.name))}</span>
+      <span>📅 ${t.plannedStart||'—'} → ${t.plannedEnd||'—'} ${isLate(t)?'<span class="badge red">просрочено</span>':''}</span>
+      <span>⏱ ${t.factHours||0}/${t.estHours||0} ч</span>
+    </div>
+    <div class="acts">
+      ${t.stage!=='done'?`<button class="btn success" data-move="${t.id}:done">✓</button>`:''}
+      ${t.stage==='todo'?`<button class="btn warn" data-move="${t.id}:in_progress">▶</button>`:''}
+    </div>
+  </div>`;
+}
+
+/* ============ КАРТОЧКА ЗАДАЧИ ============ */
+function openTask(id){
+  const t=task(id); if(!t)return;
+  t.viewedByAssignee=true; t.signals=(t.signals||[]).map(s=>({...s,read:true})); saveDB();
+  const p=proj(t.projectId);
+  const c=$('modalContent');
+  const comments=db.comments.filter(x=>x.taskId===id);
+  const hoursOnTask = hoursByTask(t.id);
+  
+  const supplyIcon = t.isSupplyTask ? '📦 ' : '';
+  
+  c.innerHTML=`<button class="close" onclick="closeModal()">×</button>
+    <h2>${supplyIcon}${esc(t.title)}</h2>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">${esc(p?.name||'')} • ${esc(p?.code||'')} • Исполнитель: <b>${esc(emp(t.assigneeId)?.name||'—')}</b></div>
+    <div class="row">
+      <div class="card"><h3>План</h3>
+        <div style="font-size:13px">Начало: <b>${t.plannedStart||'—'}</b><br>Окончание: <b>${t.plannedEnd||'—'}</b> ${isLate(t)?'<span class="badge red">просрочено</span>':''}<br>
+        План часов: <b>${t.estHours||0}</b>, факт: <b>${t.factHours||0}</b><br>
+        Приоритет: <b>${t.priority||'normal'}</b><br>
+        Статус: <b>${stageLabel(t.stage)}</b></div>
+        ${t.dependencies&&t.dependencies.length?`<div style="margin-top:6px;font-size:12px;color:#666">Зависит от: ${t.dependencies.map(d=>esc(task(d)?.title||d)).join(', ')}</div>`:''}
+      </div>
+      <div class="card"><h3>Снабжение</h3>
+        ${(t.supplyNeeds||[]).map(s=>`<div style="font-size:13px">${esc(mat(s.materialId)?.name||s.materialId)} — ${s.qty} ${esc(mat(s.materialId)?.unit||'')} <span class="badge ${s.status==='delivered'?'green':s.status==='ordered'?'warn':'red'}">${({need:'нужно',ordered:'заказано',delivered:'получено'})[s.status]}</span></div>`).join('')||'<div class="empty">Нет потребностей</div>'}
+        <div style="margin-top:8px;font-size:13px">⏱ <b>По табелю: ${hoursOnTask.toFixed(1)} ч</b></div>
+        ${hoursOnTask>0?`<div style="font-size:12px;color:#666">${peopleByTask(t.id).map(x=>`${esc(shortName(x.name))}: ${x.hours.toFixed(1)} ч`).join(' • ')}</div>`:''}
+      </div>
+    </div>
+    <h3 style="margin-top:14px">Комментарии</h3>
+    <div id="taskComments">${comments.map(c=>`<div class="comment"><div class="meta"><span>${esc(shortName(emp(c.authorId)?.name))} • ${new Date(c.at).toLocaleString('ru-RU')}</span></div><div class="txt">${esc(c.text)}</div></div>`).join('')||'<div class="empty">Комментариев нет</div>'}</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="newComment" placeholder="Написать комментарий..." style="flex:1;padding:7px 9px;border:1px solid #ddd;border-radius:6px">
+      <button class="btn primary" onclick="addComment('${id}')">Отправить</button>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      ${t.stage!=='done'?`<button class="btn success" onclick="setStage('${id}','done')">✓ Завершить</button>`:''}
+      ${t.stage==='in_progress'?`<button class="btn" onclick="setStage('${id}','blocked')">⚠ Проблема</button>`:''}
+      ${isManager()?`<button class="btn danger" onclick="deleteTask('${id}')">🗑 Удалить</button>`:''}
+    </div>`;
+  $('modalBg').classList.add('open');
+}
+function addComment(tid){
+  const inp=$('newComment'); if(!inp)return;
+  const txt=inp.value.trim(); if(!txt)return;
+  db.comments.push({id:'c'+Date.now(), taskId:tid, projectId:task(tid).projectId, authorId:currentUserId, text:txt, at:new Date().toISOString()});
+  saveDB(); openTask(tid); toast('Комментарий добавлен','success');
+}
+function setStage(tid,st){
+  const t=task(tid); if(!t)return;
+  t.stage=st; if(st==='done'){t.factEnd=today();pushSignal(tid,'done','Задача выполнена: '+t.title);}
+  saveDB(); openTask(tid); toast('Статус обновлён','success');
+}
+function deleteTask(tid){
+  if(!confirm('Удалить задачу?'))return;
+  db.tasks=db.tasks.filter(x=>x.id!==tid); saveDB(); closeModal(); toast('Удалено','warn'); renderAll();
+}
+
+/* ============ ТАБЕЛЬ: утилиты ============ */
+function tsEntryFor(empId, date){
+  return db.timesheet.find(x=>x.employeeId===empId && x.date===date);
+}
+function totalHoursForProject(pid){
+  let s=0;
+  db.timesheet.forEach(ts=> ts.entries.forEach(e=>{ if(e.projectId===pid) s+=e.hours; }));
+  return s;
+}
+function hoursByPeopleForProject(pid){
+  const m={};
+  db.timesheet.forEach(ts=> ts.entries.forEach(e=>{
+    if(e.projectId!==pid)return;
+    if(!m[ts.employeeId]) m[ts.employeeId]={name:emp(ts.employeeId)?.name||ts.employeeId, hours:0};
+    m[ts.employeeId].hours+=e.hours;
+  }));
+  return Object.values(m).sort((a,b)=>b.hours-a.hours);
+}
+function hoursByTask(taskId){
+  const t=task(taskId); if(!t)return 0;
+  const pid=t.projectId;
+  let s=0; db.timesheet.forEach(ts=> ts.entries.forEach(e=>{ if(e.projectId===pid) s+=e.hours; }));
+  return s;
+}
+function peopleByTask(taskId){
+  const t=task(taskId); if(!t)return [];
+  const m={};
+  db.timesheet.forEach(ts=> ts.entries.forEach(e=>{
+    if(e.projectId!==t.projectId)return;
+    if(!m[ts.employeeId]) m[ts.employeeId]={name:emp(ts.employeeId)?.name||ts.employeeId, hours:0};
+    m[ts.employeeId].hours+=e.hours;
+  }));
+  return Object.values(m).sort((a,b)=>b.hours-a.hours);
+}
+function projectsForEmployee(empId){
+  const arr=[];
+  db.projects.forEach(p=>{
+    const inTeam=p.team.includes(empId);
+    const asAssignee=db.tasks.some(t=>t.projectId===p.id && t.assigneeId===empId);
+    const asSupply = db.tasks.some(t=>t.projectId===p.id && (t.supplyNeeds||[]).length>0) && (emp(empId)?.role==='supply');
+    if(inTeam||asAssignee||asSupply){
+      let role='team';
+      if(asSupply && emp(empId)?.role==='supply') role='supply';
+      else if(asAssignee) role='assignee';
+      arr.push({project:p, role});
+    }
+  });
+  return arr;
+}
+
+/* ============ ТАБЕЛЬ: рендер ============ */
+let tsDate = new Date();
+function renderTimesheet(){
+  const v=$('view-timesheet'); v.innerHTML='';
+  const y=tsDate.getFullYear(), m=tsDate.getMonth();
+  const dim=daysInMonth(y,m);
+  const todayStr=today();
+
+  const tb=el('div',{class:'toolbar'});
+  tb.innerHTML=`<button class="btn" id="tsPrev">◀</button>
+    <b style="min-width:160px;text-align:center;display:inline-block">${MONTHS[m]} ${y}</b>
+    <button class="btn" id="tsNext">▶</button>
+    <button class="btn" id="tsToday">Сегодня</button>
+    <select id="tsEmpFilter"><option value="">Все сотрудники</option></select>`;
+  v.appendChild(tb);
+  const sel=tb.querySelector('#tsEmpFilter');
+  db.employees.forEach(e=>{ const o=document.createElement('option'); o.value=e.id; o.textContent=e.name; sel.appendChild(o); });
+  tb.querySelector('#tsPrev').onclick=()=>{ tsDate.setMonth(tsDate.getMonth()-1); renderTimesheet(); };
+  tb.querySelector('#tsNext').onclick=()=>{ tsDate.setMonth(tsDate.getMonth()+1); renderTimesheet(); };
+  tb.querySelector('#tsToday').onclick=()=>{ tsDate=new Date(); renderTimesheet(); };
+  sel.onchange=()=>renderTimesheet();
+
+  const filterEmp = sel.value;
+  const emps = filterEmp ? db.employees.filter(e=>e.id===filterEmp) : db.employees;
+
+  const wrap=el('div',{class:'timesheet-wrap'});
+  let html='<table class="timesheet-table"><thead><tr><th class="emp-col">Сотрудник</th>';
+  for(let d=1; d<=dim; d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html+=`<th class="${ds===todayStr?'today-col':''}">${d}</th>`;
+  }
+  html+='<th>Итого</th></tr></thead><tbody>';
+  emps.forEach(e=>{
+    html+=`<tr><td class="emp-cell">${esc(e.name)}</td>`;
+    let total=0;
+    for(let d=1; d<=dim; d++){
+      const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const rec=tsEntryFor(e.id, ds);
+      const h = rec ? rec.entries.reduce((s,x)=>s+x.hours,0) : 0;
+      const hasComment = rec && rec.entries.some(x=>(x.thread||[]).length>0);
+      total+=h;
+      const cls=['hours-cell'];
+      if(h>0) cls.push('has-hours');
+      if(ds===todayStr) cls.push('today');
+      if(hasComment) cls.push('has-comment');
+      html+=`<td class="${cls.join(' ')}" data-ts-emp="${e.id}" data-ts-date="${ds}">${h>0?h.toFixed(1):''}${hasComment?' 💬':''}</td>`;
+    }
+    html+=`<td class="total-cell" data-ts-total="${e.id}">${total.toFixed(1)}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+  v.appendChild(wrap);
+
+  wrap.querySelectorAll('[data-ts-emp]').forEach(td=>td.onclick=()=>{
+    openTimesheetEntry(td.dataset.tsEmp, td.dataset.tsDate);
+  });
+  wrap.querySelectorAll('[data-ts-total]').forEach(td=>td.onclick=()=>{
+    openMonthSummary(td.dataset.tsTotal, y, m);
+  });
+}
+
+/* ============ ТАБЕЛЬ: модалка учёта времени ============ */
+function openTimesheetEntry(empId, date){
+  const c=$('modalContent');
+  const e=emp(empId); if(!e)return;
+  const projs=projectsForEmployee(empId);
+  const rec=tsEntryFor(empId, date) || {id:'ts'+Date.now(), employeeId:empId, date, entries:[]};
+
+  let html=`<button class="close" onclick="closeModal()">×</button>
+    <h2>⏱️ Учёт времени</h2>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">${esc(e.name)} • ${date} • проектов: ${projs.length}</div>`;
+  if(!projs.length){
+    html+='<div class="empty">Сотрудник не участвует ни в одном проекте и не назначен исполнителем.</div>';
+  } else {
+    html+='<div id="tsEntryList">';
+    projs.forEach(({project:p, role})=>{
+      const existing = rec.entries.find(x=>x.projectId===p.id);
+      const hours = existing?.hours || 0;
+      const thread = existing?.thread || [];
+      const roleLabel = role==='supply'?'📦 снабжение':role==='assignee'?'👷 исполнитель':'👥 участник';
+      const supplyList = role==='supply' ? db.tasks.filter(t=>t.projectId===p.id && (t.supplyNeeds||[]).length>0)
+        .flatMap(t=>t.supplyNeeds.map(s=>`${mat(s.materialId)?.name||s.materialId} — ${s.qty}`)) : [];
+      html+=`<div class="entry-item" data-entry="${p.id}">
+        <div class="entry-head">
+          <div class="entry-proj">${esc(p.name)} <span class="entry-role">${esc(p.code)} • ${roleLabel}</span></div>
+          <input type="number" min="0" max="24" step="0.5" class="entry-hours" data-hours="${p.id}" value="${hours}">
+        </div>
+        ${supplyList.length?`<div style="font-size:11px;color:#666;margin-top:4px">${supplyList.map(x=>'• '+esc(x)).join('<br>')}</div>`:''}
+        <div class="thread">
+          ${thread.length?thread.map(m=>`<div class="thread-msg">
+            <div class="meta"><span>${esc(shortName(emp(m.authorId)?.name)||'—')} • ${new Date(m.at).toLocaleString('ru-RU')}</span></div>
+            <div class="txt">${esc(m.text)}</div>
+          </div>`).join(''):'<div style="font-size:11px;color:#999;font-style:italic">Комментариев пока нет — можно дописать.</div>'}
+          <div class="thread-add">
+            <input data-thread-input="${p.id}" placeholder="Дописать комментарий (открытая ветка)...">
+            <button class="btn primary" data-thread-add="${p.id}">Дописать</button>
+          </div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+    html+=`<div class="entry-total">Всего часов: <span id="tsTotal">${rec.entries.reduce((s,x)=>s+x.hours,0).toFixed(1)}</span></div>`;
+    html+=`<div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn primary" id="tsSave">💾 Сохранить</button>
+      <button class="btn" onclick="closeModal()">Отмена</button>
+    </div>`;
+  }
+  c.innerHTML=html;
+  $('modalBg').classList.add('open');
+
+  const updateTotal=()=>{
+    let s=0; document.querySelectorAll('[data-hours]').forEach(i=>s+=parseFloat(i.value)||0);
+    const t=$('tsTotal'); if(t)t.textContent=s.toFixed(1);
+  };
+  document.querySelectorAll('[data-hours]').forEach(i=>i.oninput=updateTotal);
+
+  document.querySelectorAll('[data-thread-add]').forEach(btn=>btn.onclick=()=>{
+    const pid=btn.dataset.threadAdd;
+    const inp=document.querySelector(`[data-thread-input="${pid}"]`);
+    const txt=inp.value.trim(); if(!txt)return;
+    let entry = rec.entries.find(x=>x.projectId===pid);
+    if(!entry){ entry={projectId:pid, role:projectsForEmployee(empId).find(x=>x.project.id===pid)?.role||'team', hours:0, thread:[]}; rec.entries.push(entry); }
+    entry.thread=entry.thread||[];
+    entry.thread.push({id:'m'+Date.now(), authorId:currentUserId, at:new Date().toISOString(), text:txt});
+    const hInp=document.querySelector(`[data-hours="${pid}"]`);
+    if(hInp) entry.hours=parseFloat(hInp.value)||0;
+    saveTimesheetRecord(rec);
+    openTimesheetEntry(empId, date);
+    toast('Комментарий добавлен','success');
+  });
+
+  const saveBtn=$('tsSave');
+  if(saveBtn) saveBtn.onclick=()=>{
+    rec.entries=[];
+    document.querySelectorAll('.entry-item').forEach(item=>{
+      const pid=item.dataset.entry;
+      const hInp=item.querySelector(`[data-hours="${pid}"]`);
+      const hours=parseFloat(hInp.value)||0;
+      const existing=tsEntryFor(empId,date)?.entries.find(x=>x.projectId===pid);
+      const thread=existing?.thread||[];
+      if(hours>0 || thread.length>0){
+        const role=projectsForEmployee(empId).find(x=>x.project.id===pid)?.role||'team';
+        rec.entries.push({projectId:pid, role, hours, thread});
+      }
+    });
+    saveTimesheetRecord(rec);
+    closeModal();
+    renderTimesheet();
+    toast('Табель сохранён','success');
+  };
+}
+function saveTimesheetRecord(rec){
+  const idx=db.timesheet.findIndex(x=>x.employeeId===rec.employeeId && x.date===rec.date);
+  if(rec.entries.length===0){
+    if(idx>=0) db.timesheet.splice(idx,1);
+  } else {
+    if(idx>=0) db.timesheet[idx]=rec; else db.timesheet.push(rec);
+  }
+  saveDB();
+}
+
+/* ============ ТАБЕЛЬ: месячная сводка ============ */
+function openMonthSummary(empId, y, m){
+  const e=emp(empId); if(!e)return;
+  const dim=daysInMonth(y,m);
+  const byProject={};
+  for(let d=1; d<=dim; d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const rec=tsEntryFor(empId, ds);
+    if(!rec)continue;
+    rec.entries.forEach(en=>{
+      if(!byProject[en.projectId]) byProject[en.projectId]={project:proj(en.projectId), role:en.role, hours:0, days:0, threads:[]};
+      byProject[en.projectId].hours+=en.hours;
+      if(en.hours>0) byProject[en.projectId].days+=1;
+      if(en.thread) byProject[en.projectId].threads.push(...en.thread);
+    });
+  }
+  const total=Object.values(byProject).reduce((s,x)=>s+x.hours,0);
+  const c=$('modalContent');
+  let html=`<button class="close" onclick="closeModal()">×</button>
+    <h2>📊 Итого за месяц: ${esc(e.name)}</h2>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">${MONTHS[m]} ${y}</div>`;
+  const arr=Object.values(byProject);
+  if(!arr.length){ html+='<div class="empty">Нет записей за этот месяц</div>'; }
+  else {
+    arr.sort((a,b)=>b.hours-a.hours);
+    arr.forEach(x=>{
+      const pct=total>0?((x.hours/total)*100).toFixed(1):0;
+      const roleLabel=x.role==='supply'?'📦 снабжение':x.role==='assignee'?'👷 исполнитель':'👥 участник';
+      html+=`<div class="month-sum-row">
+        <div><b style="color:var(--blue)">${esc(x.project?.name||'—')}</b>
+          <div style="font-size:11px;color:#666">${esc(x.project?.code||'')} • ${roleLabel} • ${x.days} дн.</div></div>
+        <div style="text-align:right"><div class="h">${x.hours.toFixed(1)} ч</div>
+          <div style="font-size:11px;color:#666">${pct}%</div></div>
+      </div>`;
+    });
+    html+=`<div class="entry-total">Всего часов: <span>${total.toFixed(1)}</span></div>`;
+  }
+  c.innerHTML=html;
+  $('modalBg').classList.add('open');
+}
+
+/* ============ ГАНТ ============ */
+let ganttMode='tasks';
+let ganttRange=14;
+function renderGantt(){
+  const v=$('view-gantt'); v.innerHTML='';
+  const tb=el('div',{class:'toolbar'});
+  tb.innerHTML=`
+    <div style="display:flex;gap:4px">
+      <button class="btn ${ganttMode==='tasks'?'primary':''}" data-mode="tasks">📋 По задачам</button>
+      <button class="btn ${ganttMode==='people'?'primary':''}" data-mode="people">👷 По людям (ресурсный)</button>
+    </div>
+    <select id="gProj"><option value="">Все проекты</option>${db.projects.map(p=>`<option value="${p.id}">${esc(p.code)} — ${esc(p.name)}</option>`).join('')}</select>
+    <select id="gRange">
+      <option value="14" ${ganttRange===14?'selected':''}>2 недели</option>
+      <option value="30" ${ganttRange===30?'selected':''}>Месяц</option>
+      <option value="60" ${ganttRange===60?'selected':''}>2 месяца</option>
+    </select>
+    <span style="font-size:12px;color:#666">Период от сегодня</span>`;
+  v.appendChild(tb);
+  const wrap=el('div',{class:'gantt'}); v.appendChild(wrap);
+  const summary=el('div',{class:'card load-summary',style:'margin-top:12px'}); v.appendChild(summary);
+
+  tb.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ ganttMode=b.dataset.mode; renderGantt(); });
+  tb.querySelector('#gRange').onchange=e=>{ ganttRange=+e.target.value; renderGantt(); };
+  tb.querySelector('#gProj').onchange=()=>draw();
+
+  function draw(){
+    const pid=tb.querySelector('#gProj').value;
+    const start=new Date(); start.setHours(0,0,0,0);
+    const end=new Date(start); end.setDate(end.getDate()+ganttRange-1);
+    const days=[]; for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) days.push(new Date(d));
+    if(ganttMode==='tasks') drawTasks(pid, days, wrap);
+    else drawPeople(pid, days, wrap, summary);
+  }
+  draw();
+}
+function drawTasks(pid, days, wrap){
+  const tasks=db.tasks.filter(t=>!pid||t.projectId===pid);
+  if(!tasks.length){ wrap.innerHTML='<div class="empty">Задач нет</div>'; return; }
+  let html='<table><thead><tr><th class="name">Задача / проект</th>';
+  days.forEach(d=>{ const ds=d.toISOString().slice(0,10); const isToday=ds===today();
+    html+=`<th style="${isToday?'background:#fffbe6':''}">${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}</th>`; });
+  html+='</tr></thead><tbody>';
+  tasks.forEach(t=>{
+    const p=proj(t.projectId);
+    html+=`<tr><td class="name">${esc(t.title)}<div style="font-size:11px;color:#888">${esc(p?.code||'')} • ${esc(shortName(emp(t.assigneeId)?.name))}</div></td>`;
+    days.forEach(d=>{
+      const ds=d.toISOString().slice(0,10);
+      const inRange = t.plannedStart && t.plannedEnd && ds>=t.plannedStart && ds<=t.plannedEnd;
+      let cls='plan';
+      if(inRange){ if(t.stage==='done')cls='done'; else if(isLate(t))cls='late'; else if(t.stage==='blocked')cls='blocked'; }
+      html+=`<td class="bar">${inRange?`<div class="bar-fill ${cls}" style="left:2px;right:2px" data-open-task="${t.id}"></div>`:''}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('[data-open-task]').forEach(b=>b.onclick=()=>openTask(b.dataset.openTask));
+}
+function drawPeople(pid, days, wrap, summary){
+  const relevantEmpIds = new Set();
+  db.tasks.forEach(t=>{
+    if(pid && t.projectId!==pid) return;
+    if(t.plannedStart && t.plannedEnd) relevantEmpIds.add(t.assigneeId);
+  });
+  db.timesheet.forEach(ts=>ts.entries.forEach(en=>{
+    if(pid && en.projectId!==pid) return;
+    if(en.role==='supply') relevantEmpIds.add(ts.employeeId);
+  }));
+  const emps=db.employees.filter(e=>relevantEmpIds.has(e.id));
+  if(!emps.length){ wrap.innerHTML='<div class="empty">Нет данных для отображения</div>'; summary.innerHTML=''; return; }
+
+  const cellMap={};
+  db.tasks.forEach(t=>{
+    if(pid && t.projectId!==pid) return;
+    if(!t.plannedStart || !t.plannedEnd) return;
+    const p=proj(t.projectId);
+    days.forEach(d=>{
+      const ds=d.toISOString().slice(0,10);
+      if(ds>=t.plannedStart && ds<=t.plannedEnd){
+        const key=`${t.assigneeId}|${ds}`;
+        if(!cellMap[key]) cellMap[key]=[];
+        let cls='plan';
+        if(t.stage==='done')cls='done'; else if(isLate(t))cls='late'; else if(t.stage==='blocked')cls='blocked';
+        cellMap[key].push({task:t, project:p, cls, source:'task'});
+      }
+    });
+  });
+  db.timesheet.forEach(ts=>{
+    ts.entries.forEach(en=>{
+      if(pid && en.projectId!==pid) return;
+      if(!en.hours) return;
+      const key=`${ts.employeeId}|${ts.date}`;
+      if(!cellMap[key]) cellMap[key]=[];
+      cellMap[key].push({project:proj(en.projectId), cls:'plan', source:'ts', hours:en.hours, role:en.role});
+    });
+  });
+
+  const overloadKeys=new Set();
+  Object.entries(cellMap).forEach(([key, arr])=>{
+    const hours=arr.filter(x=>x.source==='ts').reduce((s,x)=>s+(x.hours||0),0);
+    if(hours>8) overloadKeys.add(key);
+  });
+
+  let html='<table><thead><tr><th class="name">Сотрудник</th>';
+  days.forEach(d=>{ const ds=d.toISOString().slice(0,10); const isToday=ds===today();
+    html+=`<th style="${isToday?'background:#fffbe6':''}">${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}</th>`; });
+  html+='</tr></thead><tbody>';
+  emps.forEach(e=>{
+    html+=`<tr><td class="name">${esc(e.name)}<div style="font-size:11px;color:#888">${esc(e.position)}</div></td>`;
+    days.forEach(d=>{
+      const ds=d.toISOString().slice(0,10);
+      const key=`${e.id}|${ds}`;
+      const arr=cellMap[key]||[];
+      const overload=overloadKeys.has(key);
+      html+=`<td class="bar ${overload?'conflict':''}" style="min-width:44px">`;
+      if(arr.length){
+        arr.slice(0,3).forEach((x,i)=>{
+          const top=4+i*7;
+          const title=x.task?`${x.task.title}`:`${x.project?.name||''} (${x.hours} ч)`;
+          const extra=overload?' overload':'';
+          html+=`<div class="bar-fill ${x.cls}${extra}" style="top:${top}px;bottom:auto;height:6px;left:2px;right:2px"
+            title="${esc(title)}" ${x.task?`data-open-task="${x.task.id}"`:''}></div>`;
+        });
+        if(arr.length>3) html+=`<div style="position:absolute;bottom:1px;right:2px;font-size:9px;color:#888">+${arr.length-3}</div>`;
+      }
+      html+='</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('[data-open-task]').forEach(b=>b.onclick=()=>openTask(b.dataset.openTask));
+
+  let s='<h3 style="margin:0 0 10px;color:var(--blue)">Загрузка за период</h3>';
+  const rows=emps.map(e=>{
+    let taskHours=0, tsHours=0, conflicts=0;
+    days.forEach(d=>{
+      const ds=d.toISOString().slice(0,10);
+      const arr=cellMap[`${e.id}|${ds}`]||[];
+      tsHours+=arr.filter(x=>x.source==='ts').reduce((s,x)=>s+(x.hours||0),0);
+      if(arr.length>1) conflicts++;
+    });
+    taskHours=db.tasks.filter(t=>t.assigneeId===e.id && (!pid||t.projectId===pid) && t.estHours).reduce((s,t)=>s+(t.estHours||0),0);
+    return {e, taskHours, tsHours, conflicts};
+  });
+  s+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">';
+  rows.forEach(r=>{
+    s+=`<div style="background:#fafafa;border:1px solid #ddd;border-radius:6px;padding:10px;font-size:13px">
+      <div style="font-weight:bold;color:var(--blue)">${esc(r.e.name)}</div>
+      <div style="color:#666">План: ${r.taskHours} ч • Факт (табель): ${r.tsHours.toFixed(1)} ч</div>
+      ${r.conflicts?`<div style="color:var(--red);font-size:12px;margin-top:2px">⚠ пересечений: ${r.conflicts}</div>`:''}
+    </div>`;
+  });
+  s+='</div>';
+  summary.innerHTML=s;
+}
+
+/* ============ СНАБЖЕНИЕ ============ */
+function renderSupply(){
+  const v=$('view-supply'); v.innerHTML='';
+  v.appendChild(el('h2',{},'📦 Материалы'));
+  const k=el('div',{class:'grid g3'});
+  db.materials.forEach(m=>{
+    const low=m.qtyOnHand<m.minQty;
+    k.innerHTML+=`<div class="kpi ${low?'danger':'ok'}"><div class="v">${m.qtyOnHand}</div><div class="l">${esc(m.name)} (${esc(m.unit)})${low?' ⚠ ниже минимума':''}</div></div>`;
+  });
+  v.appendChild(k);
+  v.appendChild(el('h3',{style:'margin-top:18px'},'Потребности по задачам'));
+  const needs=[];
+  db.tasks.forEach(t=>(t.supplyNeeds||[]).forEach(s=>needs.push({t,s})));
+  if(!needs.length){ v.appendChild(el('div',{class:'empty'},'Потребностей нет')); }
+  else {
+    const tbl=el('table',{style:'width:100%;border-collapse:collapse;background:#fff;border:1px solid #ddd;border-radius:8px;font-size:13px'});
+    tbl.innerHTML=`<thead><tr style="background:#f0f0f0"><th style="padding:8px;text-align:left">Материал</th><th style="padding:8px">Кол-во</th><th style="padding:8px">Статус</th><th style="padding:8px;text-align:left">Задача</th><th style="padding:8px;text-align:left">Проект</th></tr></thead><tbody>`+
+      needs.map(({t,s})=>{ const m=mat(s.materialId);
+        return `<tr style="border-top:1px solid #eee"><td style="padding:8px">${esc(m?.name||s.materialId)}</td>
+          <td style="padding:8px;text-align:center">${s.qty} ${esc(m?.unit||'')}</td>
+          <td style="padding:8px;text-align:center"><span class="badge ${s.status==='delivered'?'green':s.status==='ordered'?'warn':'red'}">${({need:'нужно',ordered:'заказано',delivered:'получено'})[s.status]}</span></td>
+          <td style="padding:8px">${esc(t.title)}</td>
+          <td style="padding:8px">${esc(proj(t.projectId)?.name||'')}</td></tr>`;
+      }).join('')+'</tbody>';
+    v.appendChild(tbl);
+  }
+  v.appendChild(el('h3',{style:'margin-top:18px'},'Работа снабженцев (по табелю)'));
+  const supplyEmps=db.employees.filter(e=>e.role==='supply');
+  if(!supplyEmps.length){ v.appendChild(el('div',{class:'empty'},'Снабженцев нет')); }
+  else {
+    supplyEmps.forEach(se=>{
+      const byProj={};
+      db.timesheet.forEach(ts=>{ if(ts.employeeId!==se.id)return;
+        ts.entries.forEach(en=>{ if(en.role!=='supply')return;
+          if(!byProj[en.projectId])byProj[en.projectId]={project:proj(en.projectId), hours:0};
+          byProj[en.projectId].hours+=en.hours;
+        });
+      });
+      const arr=Object.values(byProj).sort((a,b)=>b.hours-a.hours);
+      const c=el('div',{class:'card',style:'margin-bottom:8px'});
+      c.innerHTML=`<div style="font-weight:bold;color:var(--blue)">${esc(se.name)}</div>
+        ${arr.length?arr.map(x=>`<div style="font-size:13px;color:#555">• ${esc(x.project?.name||'—')} — <b>${x.hours.toFixed(1)} ч</b></div>`).join(''):'<div class="empty">Нет часов по снабжению</div>'}`;
+      v.appendChild(c);
+    });
+  }
+}
+
+/* ============ ЛЮДИ ============ */
+function renderPeople(){
+  const v=$('view-people'); v.innerHTML='';
+  v.appendChild(el('h2',{},'👷 Сотрудники'));
+  const list=el('div'); v.appendChild(list);
+  db.employees.forEach(e=>{
+    const myTasks=db.tasks.filter(t=>t.assigneeId===e.id&&t.stage!=='done').length;
+    const myHours=db.timesheet.filter(ts=>ts.employeeId===e.id).reduce((s,ts)=>s+ts.entries.reduce((a,en)=>a+en.hours,0),0);
+    const row=el('div',{class:'card',style:'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'});
+    row.innerHTML=`<div><b style="color:var(--blue)">${esc(e.name)}</b> <span class="badge">${esc(e.position)}</span>
+      <span class="badge ${e.role==='manager'?'red':e.role==='master'?'warn':e.role==='supply'?'green':'blue'}">${({manager:'руководитель',master:'мастер',worker:'рабочий',supply:'снабженец',qc:'ОТК'})[e.role]}</span></div>
+      <div style="font-size:13px;color:#666">Активных задач: <b>${myTasks}</b> • Часов в табеле: <b>${myHours.toFixed(1)}</b></div>`;
+    list.appendChild(row);
+  });
+}
+
+/* ============ МОДАЛКИ: ПРОЕКТ / КОМАНДА / ЗАДАЧА ============ */
+function newProject(){
+  const c=$('modalContent');
+  c.innerHTML=`<button class="close" onclick="closeModal()">×</button><h2>Новый проект</h2>
+    <div class="row">
+      <div class="field"><label>Поток</label><select id="npFlow"><option value="external">Внешний заказ</option><option value="stock">СНС (на склад)</option></select></div>
+      <div class="field"><label>Название</label><input id="npName" placeholder="Например: Металлоконструкция МК-12"></div>
+      <div class="field"><label>Клиент (для СНС — «Склад»)</label><input id="npClient" placeholder="ООО «...»"></div>
+      <div class="field"><label>Количество</label><input id="npQty" type="number" value="1"></div>
+      <div class="field"><label>Дата начала</label><input id="npStart" type="date" value="${today()}"></div>
+      <div class="field"><label>Срок</label><input id="npDue" type="date" value="${dateOffset(14)}"></div>
+      <div class="field"><label>Руководитель</label><select id="npManager">${db.employees.filter(e=>e.role==='manager'||e.role==='master').map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Статус</label><select id="npStatus"><option value="team_forming">Формируется</option><option value="awaiting_accept">Ждёт акцепта</option><option value="in_work">В работе</option></select></div>
+    </div>
+    <div class="field"><label>Описание</label><textarea id="npDesc"></textarea></div>
+    <button class="btn primary" onclick="createProject()">Создать</button>`;
+  $('modalBg').classList.add('open');
+}
+function createProject(){
+  const flow=$('npFlow').value;
+  const prefix=flow==='external'?'ЗК':'СНС';
+  const n=db.projects.filter(p=>p.flow===flow).length+1;
+  const code=prefix+'-'+new Date().getFullYear()+'-'+String(n).padStart(4,'0');
+  const p={id:'p'+Date.now(), code, flow, name:$('npName').value.trim()||'Без названия',
+    clientName:$('npClient').value.trim()||(flow==='stock'?'Склад':''), qty:+$('npQty').value||1,
+    startDate:$('npStart').value, dueDate:$('npDue').value, status:$('npStatus').value,
+    managerId:$('npManager').value, team:[], acceptedBy:{}, description:$('npDesc').value.trim()};
+  db.projects.push(p); saveDB(); closeModal(); toast('Проект создан','success'); renderAll();
+}
+function editTeam(pid){
+  const p=proj(pid); if(!p)return;
+  const c=$('modalContent');
+  c.innerHTML=`<button class="close" onclick="closeModal()">×</button><h2>Команда: ${esc(p.name)}</h2>
+    ${db.employees.map(e=>`
+      <label style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dotted #eee;font-size:14px">
+        <input type="checkbox" data-team="${e.id}" ${p.team.includes(e.id)?'checked':''}>
+        <span>${esc(e.name)} <span class="badge">${esc(e.position)}</span></span>
+      </label>`).join('')}
+    <div style="margin-top:12px"><button class="btn primary" onclick="saveTeam('${pid}')">Сохранить</button></div>`;
+  $('modalBg').classList.add('open');
+}
+function saveTeam(pid){
+  const p=proj(pid); p.team=[];
+  document.querySelectorAll('[data-team]:checked').forEach(cb=>p.team.push(cb.dataset.team));
+  if(p.team.length && p.status==='team_forming') p.status='awaiting_accept';
+  saveDB(); closeModal(); toast('Команда сохранена','success'); openProject(pid);
+}
+function newTask(pid){
+  const c=$('modalContent');
+  c.innerHTML=`<button class="close" onclick="closeModal()">×</button><h2>Новая задача</h2>
+    <div class="field"><label>Название</label><input id="ntTitle"></div>
+    <div class="row">
+      <div class="field"><label>Исполнитель</label><select id="ntAssignee">${db.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Приоритет</label><select id="ntPriority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="critical">Критический</option></select></div>
+      <div class="field"><label>План. начало</label><input id="ntStart" type="date" value="${today()}"></div>
+      <div class="field"><label>План. окончание</label><input id="ntEnd" type="date" value="${dateOffset(7)}"></div>
+      <div class="field"><label>План часов</label><input id="ntHours" type="number" value="8"></div>
+    </div>
+    <button class="btn primary" onclick="createTask('${pid}')">Создать</button>`;
+  $('modalBg').classList.add('open');
+}
+function createTask(pid){
+  const t={id:'t'+Date.now(), projectId:pid, title:$('ntTitle').value.trim()||'Задача',
+    assigneeId:$('ntAssignee').value, authorId:currentUserId, createdAt:today(),
+    plannedStart:$('ntStart').value, plannedEnd:$('ntEnd').value,
+    stage:'todo', priority:$('ntPriority').value, estHours:+$('ntHours').value||0, factHours:0,
+    dependencies:[], supplyNeeds:[], isSupplyTask:false, viewedByAssignee:false, viewedByManager:true,
+    signals:[{id:'s'+Date.now(), type:'new', text:'Новая задача от '+me().name, at:new Date().toISOString(), read:false}]};
+  db.tasks.push(t); saveDB(); closeModal(); toast('Задача создана','success'); openProject(pid);
+}
+
+// НОВАЯ ФУНКЦИЯ: Создание заявки снабженцу от любого сотрудника
+function newSupplyTask(pid) {
+  const supplyEmps = db.employees.filter(e => e.role === 'supply');
+  if(!supplyEmps.length) { toast('В системе нет сотрудников с ролью "Снабженец"', 'error'); return; }
+  
+  const c = $('modalContent');
+  c.innerHTML = `<button class="close" onclick="closeModal()">×</button><h2>📦 Заявка снабженцу</h2>
+    <div class="row">
+      <div class="field">
+        <label>Что нужно закупить / привезти</label>
+        <input id="stTitle" placeholder="Например: Электроды сварочные 5 кг">
+      </div>
+      <div class="field">
+        <label>Кому назначить</label>
+        <select id="stAssignee">${supplyEmps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Срок (крайний)</label>
+        <input id="stEnd" type="date" value="${dateOffset(2)}">
+      </div>
+      <div class="field">
+        <label>Приоритет</label>
+        <select id="stPriority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="critical">Критический</option></select>
+      </div>
+    </div>
+    <button class="btn primary" onclick="createSupplyTask('${pid}')">Отправить заявку</button>`;
+  $('modalBg').classList.add('open');
+}
+function createSupplyTask(pid) {
+  const title = $('stTitle').value.trim() || 'Заявка снабжения';
+  const assigneeId = $('stAssignee').value;
+  const t = {
+    id: 't' + Date.now(), projectId: pid, title: '📦 ' + title,
+    assigneeId: assigneeId, authorId: currentUserId, createdAt: today(),
+    plannedStart: today(), plannedEnd: $('stEnd').value,
+    stage: 'todo', priority: $('stPriority').value, estHours: 2, factHours: 0,
+    dependencies: [], supplyNeeds: [], isSupplyTask: true, 
+    viewedByAssignee: false, viewedByManager: true,
+    signals: [{id:'s'+Date.now(), type:'new', text:'Новая заявка от '+me().name, at:new Date().toISOString(), read:false}]
+  };
+  db.tasks.push(t); saveDB(); closeModal(); toast('Заявка отправлена снабженцу','success'); openProject(pid);
+}
+
+/* ============ ОБЩЕЕ ============ */
+function closeModal(){ $('modalBg').classList.remove('open'); }
+function renderAll(){ renderWho(); renderDesk(); renderRegistry(); renderDash(); renderProjects(); renderGantt(); renderTimesheet(); renderSupply(); renderPeople(); }
+
+$('btnResetDemo').onclick=()=>{ if(!confirm('Сбросить демо-данные?'))return; db=JSON.parse(JSON.stringify(seed)); currentUserId=db.employees[0].id; saveDB(); renderAll(); toast('Демо сброшено','warn'); };
+
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('view-'+b.dataset.view).classList.add('active');
+});
+
+$('modalBg').addEventListener('click', e=>{ if(e.target===$('modalBg')) closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+renderAll();
+</script>
+</body>
+</html>
