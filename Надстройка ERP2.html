@@ -596,6 +596,16 @@ function showEmployeeTasksModal(empId) {
 }
 
 /* ============ ДАШБОРД ============ */
+function showKpiModal(title, contentHtml) {
+  const c = $('modalContent');
+  c.innerHTML = `<button class="close" onclick="closeModal()">×</button>
+    <h2>${title}</h2>
+    <div style="max-height: 60vh; overflow-y: auto; margin-top: 16px;">
+      ${contentHtml || '<div class="empty">Нет данных</div>'}
+    </div>`;
+  $('modalBg').classList.add('open');
+}
+
 function renderDash(){
   const v=$('view-dash'); v.innerHTML='';
   const user=me();
@@ -609,13 +619,29 @@ function renderDash(){
   v.appendChild(el('h2',{},'📊 Ключевые показатели'));
   const k=el('div',{class:'grid g3'});
   k.innerHTML=`
-    <div class="kpi"><div class="v">${activeProjects.length}</div><div class="l">Активных проектов</div></div>
-    <div class="kpi warn"><div class="v">${needAccept.length}</div><div class="l">Ждут акцепта</div></div>
-    <div class="kpi danger"><div class="v">${lateTasks.length}</div><div class="l">Просрочено задач</div></div>
-    <div class="kpi danger"><div class="v">${blocked.length}</div><div class="l">Заблокировано</div></div>
-    <div class="kpi ok"><div class="v">${sigs.length}</div><div class="l">Новых сигналов</div></div>
-    <div class="kpi"><div class="v">${unacceptedMembers}</div><div class="l">Не акцептовали</div></div>`;
+    <div class="kpi" data-kpi="active"><div class="v">${activeProjects.length}</div><div class="l">Активных проектов</div></div>
+    <div class="kpi warn" data-kpi="await"><div class="v">${needAccept.length}</div><div class="l">Ждут акцепта</div></div>
+    <div class="kpi danger" data-kpi="late"><div class="v">${lateTasks.length}</div><div class="l">Просрочено задач</div></div>
+    <div class="kpi danger" data-kpi="blocked"><div class="v">${blocked.length}</div><div class="l">Заблокировано</div></div>
+    <div class="kpi ok" data-kpi="signals"><div class="v">${sigs.length}</div><div class="l">Новых сигналов</div></div>
+    <div class="kpi" data-kpi="notacc"><div class="v">${unacceptedMembers}</div><div class="l">Не акцептовали</div></div>`;
   v.appendChild(k);
+
+  // Подготовка HTML для модалок
+  const activeHtml = activeProjects.map(p => `<div class="card" style="margin-bottom:8px; cursor:pointer" onclick="closeModal(); openProject('${p.id}')"><b>${esc(p.name)}</b> <span class="badge blue">${p.code}</span><div style="font-size:12px; color:#666">${esc(p.clientName)}</div></div>`).join('');
+  const awaitHtml = needAccept.map(p => `<div class="card" style="margin-bottom:8px; cursor:pointer" onclick="closeModal(); openProject('${p.id}')"><b>${esc(p.name)}</b> <span class="badge warn">Ждёт акцепта</span><div style="font-size:12px; color:#666">${esc(p.clientName)}</div></div>`).join('');
+  const lateHtml = lateTasks.map(t => `<div class="card" style="margin-bottom:8px; cursor:pointer; border-left: 4px solid var(--red)" onclick="closeModal(); openTask('${t.id}')"><b>${esc(t.title)}</b><div style="font-size:12px; color:#666">${esc(proj(t.projectId)?.name)} • ${esc(emp(t.assigneeId)?.name)}</div></div>`).join('');
+  const blockedHtml = blocked.map(t => `<div class="card" style="margin-bottom:8px; cursor:pointer; border-left: 4px solid var(--warn)" onclick="closeModal(); openTask('${t.id}')"><b>${esc(t.title)}</b><div style="font-size:12px; color:#666">${esc(proj(t.projectId)?.name)} • ${esc(emp(t.assigneeId)?.name)}</div></div>`).join('');
+  const sigHtml = sigs.map(s => { const t = task(s.taskId); if(!t) return ''; return `<div class="card" style="margin-bottom:8px; cursor:pointer; border-left: 4px solid var(--blue)" onclick="closeModal(); openTask('${t.id}')"><b>${esc(s.text)}</b><div style="font-size:12px; color:#666">${esc(t.title)} • ${new Date(s.at).toLocaleString('ru-RU')}</div></div>`; }).join('');
+  const notAccHtml = needAccept.map(p => { const missing = p.team.filter(id=>!(p.acceptedBy&&p.acceptedBy[id])); return `<div class="card" style="margin-bottom:8px; cursor:pointer" onclick="closeModal(); openProject('${p.id}')"><b>${esc(p.name)}</b><div style="font-size:12px; color:var(--red)">Не взяли: ${missing.map(id=>esc(emp(id)?.name)).join(', ')}</div></div>`; }).join('');
+
+  // Обработчики кликов
+  k.querySelector('[data-kpi="active"]').onclick = () => showKpiModal('Активные проекты', activeHtml);
+  k.querySelector('[data-kpi="await"]').onclick = () => showKpiModal('Ждут акцепта', awaitHtml);
+  k.querySelector('[data-kpi="late"]').onclick = () => showKpiModal('Просроченные задачи', lateHtml);
+  k.querySelector('[data-kpi="blocked"]').onclick = () => showKpiModal('Заблокированные задачи', blockedHtml);
+  k.querySelector('[data-kpi="signals"]').onclick = () => showKpiModal('Новые сигналы', sigHtml);
+  k.querySelector('[data-kpi="notacc"]').onclick = () => showKpiModal('Не акцептовали', notAccHtml);
 
   v.appendChild(el('h3',{style:'margin-top:18px'},'📡 Свежие сигналы'));
   if(!sigs.length){ v.appendChild(el('div',{class:'empty'},'Сигналов нет — всё спокойно.')); }
