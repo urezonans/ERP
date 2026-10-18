@@ -173,13 +173,24 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 
 /* Реестр задач и Таблица проектов */
 .registry-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:13px}
-.registry-table th{background:#f0f0f0;padding:10px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid var(--line);user-select:none}
+.registry-table th{background:#f0f0f0;padding:10px;text-align:left;font-size:12px;color:#555;border-bottom:2px solid var(--line);user-select:none;vertical-align:middle}
 .registry-table th.sortable{cursor:pointer}
 .registry-table th.sortable:hover{background:#e0e0e0}
-.registry-table td{padding:10px;border-bottom:1px solid #eee;vertical-align:top}
+.registry-table td{padding:10px;border-bottom:1px solid #eee;vertical-align:middle}
 .registry-table tr:hover{background:#f9f9f9}
 .registry-table .clickable{color:var(--blue);font-weight:bold;cursor:pointer;text-decoration:none}
 .registry-table .clickable:hover{text-decoration:underline}
+
+/* Спец. стили для сортировки */
+.sort-btn {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+}
+.sort-arrows {
+  display: inline-flex; flex-direction: column; line-height: 0.8; font-size: 10px; color: #999;
+}
+.sort-arrows span { padding: 0 2px; }
+.sort-arrows span:hover { color: var(--blue); }
+.sort-arrows span.active { color: var(--blue); font-weight: bold; }
 </style>
 </head>
 <body>
@@ -223,7 +234,7 @@ main{padding:16px;max-width:1500px;margin:0 auto}
 
 <script>
 /* ============ ДЕМО-ДАННЫЕ ============ */
-const LS_KEY = 'cex_demo_v3';
+const LS_KEY = 'cex_demo_v4';
 function dateOffset(d){ const x=new Date(); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10); }
 
 const seed = {
@@ -341,6 +352,11 @@ function toast(msg,type='info'){ const w=$('toasts'); const e=document.createEle
   setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),350);},3000); }
 function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
 const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function daysToDue(project) {
+  if(!project || !project.dueDate) return null;
+  return daysBetween(today(), project.dueDate);
+}
 
 /* ============ КТО Я ============ */
 function renderWho(){
@@ -640,7 +656,7 @@ function renderDash(){
 
 /* ============ ПРОЕКТЫ (ПЛИТКИ + ТАБЛИЦА) ============ */
 let projectsViewMode = 'table'; // 'table' или 'tiles'
-let projectsSort = { col: 'code', asc: true };
+let projectsSort = { col: 'dueDate', asc: true };
 
 function renderProjects(){
   const v=$('view-projects'); v.innerHTML='';
@@ -684,11 +700,18 @@ function renderProjects(){
       items.forEach(p=>{
         const accepted=p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
         const hours = totalHoursForProject(p.id);
+        const dt = daysToDue(p);
+        
+        let dtHtml = '—';
+        if(dt !== null) {
+          dtHtml = `<span style="font-weight:bold;color:${dt < 0 ? 'var(--red)' : dt <= 3 ? 'var(--warn)' : '#333'}">${dt}</span>`;
+        }
+
         html += `<div class="tile ${p.flow==='stock'?'stock':''}" data-open-project="${p.id}">
           <div class="title">${esc(p.name)}</div>
           <div class="code">${esc(p.code)}</div>
           <div class="sub"><span>${esc(p.clientName||'—')}</span><span>${p.qty} шт</span></div>
-          <div class="sub"><span>⏰ до ${p.dueDate||'—'}</span><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></div>
+          <div class="sub"><span>Срок (дней): ${dtHtml}</span><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></div>
           <div class="sub"><span>👥 ${accepted}/${p.team.length} акцептовали</span><span class="badge ${p.status==='in_work'?'green':p.status==='awaiting_accept'?'warn':'blue'}">${statusLabel(p.status)}</span></div>
           <div class="sub"><span>⏱ трудозатраты</span><span>${hours.toFixed(1)} ч</span></div>
         </div>`;
@@ -700,32 +723,44 @@ function renderProjects(){
     else {
       // Сортировка
       items.sort((a,b) => {
-        let va = a[projectsSort.col], vb = b[projectsSort.col];
-        if(projectsSort.col === 'hours') {
+        let va, vb;
+        if(projectsSort.col === 'dueDate') {
+          va = daysToDue(a); if(va === null) va = 999999;
+          vb = daysToDue(b); if(vb === null) vb = 999999;
+        } else if(projectsSort.col === 'hours') {
           va = totalHoursForProject(a.id);
           vb = totalHoursForProject(b.id);
+        } else {
+          va = a[projectsSort.col] || '';
+          vb = b[projectsSort.col] || '';
         }
+        
         if (va < vb) return projectsSort.asc ? -1 : 1;
         if (va > vb) return projectsSort.asc ? 1 : -1;
         return 0;
       });
 
-      const sortIcon = (col) => {
-        if(projectsSort.col !== col) return '';
-        return projectsSort.asc ? ' ▲' : ' ▼';
+      const sortArrows = (col) => {
+        if(projectsSort.col !== col) {
+          return `<span class="sort-arrows"><span>▲</span><span>▼</span></span>`;
+        }
+        return `<span class="sort-arrows">
+          <span class="${projectsSort.asc ? 'active' : ''}">▲</span>
+          <span class="${!projectsSort.asc ? 'active' : ''}">▼</span>
+        </span>`;
       };
 
       let html = `<table class="registry-table">
         <thead>
           <tr>
-            <th class="sortable" data-sort="code">Код${sortIcon('code')}</th>
-            <th class="sortable" data-sort="name">Проект${sortIcon('name')}</th>
-            <th class="sortable" data-sort="clientName">Клиент${sortIcon('clientName')}</th>
-            <th class="sortable" data-sort="flow">Поток${sortIcon('flow')}</th>
-            <th class="sortable" data-sort="dueDate">Срок${sortIcon('dueDate')}</th>
-            <th class="sortable" data-sort="status">Статус${sortIcon('status')}</th>
+            <th class="sortable" data-sort="code">Код ${sortArrows('code')}</th>
+            <th class="sortable" data-sort="name">Проект ${sortArrows('name')}</th>
+            <th class="sortable" data-sort="clientName">Клиент ${sortArrows('clientName')}</th>
+            <th class="sortable" data-sort="flow">Поток ${sortArrows('flow')}</th>
+            <th class="sortable" data-sort="dueDate">Срок ${sortArrows('dueDate')}</th>
+            <th class="sortable" data-sort="status">Статус ${sortArrows('status')}</th>
             <th>Команда (акцепт)</th>
-            <th class="sortable" data-sort="hours">Трудозатраты${sortIcon('hours')}</th>
+            <th class="sortable" data-sort="hours">Трудозатраты ${sortArrows('hours')}</th>
           </tr>
         </thead>
         <tbody>`;
@@ -734,7 +769,13 @@ function renderProjects(){
         const accepted = p.team.filter(id=>p.acceptedBy&&p.acceptedBy[id]).length;
         const hours = totalHoursForProject(p.id);
         const accHtml = p.team.length > 0 ? `${accepted}/${p.team.length}` : '<span style="color:#999">—</span>';
+        const dt = daysToDue(p);
         
+        let dtHtml = '—';
+        if(dt !== null) {
+          dtHtml = `<span style="font-weight:bold;color:${dt < 0 ? 'var(--red)' : dt <= 3 ? 'var(--warn)' : '#333'}">${dt}</span>`;
+        }
+
         let stBadge = `<span class="badge">${statusLabel(p.status)}</span>`;
         if(p.status === 'in_work') stBadge = `<span class="badge green">В работе</span>`;
         if(p.status === 'awaiting_accept') stBadge = `<span class="badge warn">Ждёт акцепта</span>`;
@@ -744,7 +785,7 @@ function renderProjects(){
           <td><b>${esc(p.name)}</b></td>
           <td>${esc(p.clientName)}</td>
           <td><span class="badge ${p.flow==='external'?'blue':'warn'}">${p.flow==='external'?'Внешний':'СНС'}</span></td>
-          <td style="color:#666">${p.dueDate||'—'}</td>
+          <td>${dtHtml}</td>
           <td>${stBadge}</td>
           <td>${accHtml}</td>
           <td>${hours.toFixed(1)} ч</td>
